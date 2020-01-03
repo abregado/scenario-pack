@@ -1,0 +1,10 @@
+{
+  "name": "abregado-scenario-pack",
+  "version": "0.0.1",
+  "factorio_version": "0.18",
+  "title": "Abregado's Scenario Pack",
+  "author": "abregado",
+  "description": "A bunch of scenarios I work on in my spare time",
+  "homepage": " ",
+  "dependencies": ["base"]
+}
