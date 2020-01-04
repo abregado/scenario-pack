@@ -10,6 +10,8 @@ local core_names = {
   "Six",
 }
 
+local offline_radius = 10
+
 local clear_all_ids_at_core = function(core)
   for _, id in pairs(core.overlay_ids) do
     rendering.destroy(id)
@@ -44,7 +46,12 @@ local recreate_core_rendering_objects = function(core)
   end
 
   for _, id in pairs(core.overlay_ids) do
-    rendering.set_players(id,core.players)
+    if #core.players > 0 then
+      rendering.set_visible(id,true)
+      rendering.set_players(id,core.players)
+    else
+      rendering.set_visible(id,false)
+    end
   end
 end
 
@@ -161,12 +168,14 @@ local create_core_at = function(position,area)
   local core_data = {
     name = core_names[core_number] or 'core'..tostring(core_number),
     structure = new_core,
-    radius = radius,
+    radius = 10,
+    max_radius = radius,
     view_box = {},
     free_power = true,
     players = {},
     overlay_ids = {},
     inventories = {},
+    has_power = false,
     discovered = false
   }
   set_core_view_area_by_radius(core_data)
@@ -199,6 +208,22 @@ local restrict_player_to_core_zone = function(player,core)
         x = player.position.x,
         y = core.view_box.left_top.y,
       })
+    end
+  end
+end
+
+local check_core_power_levels = function(core)
+  core.structure.energy = math.max(core.structure.energy - 100,0)
+  if core.has_power == false and core.structure.energy > 0 and core.structure.is_connected_to_electric_network() then
+    core.has_power = true
+    set_core_radius(core,core.max_radius)
+    set_core_view_area_by_radius(core)
+  elseif core.has_power and (core.structure.energy == 0 or core.structure.is_connected_to_electric_network() == false) then
+    core.has_power = false
+    set_core_radius(core,offline_radius)
+    set_core_view_area_by_radius(core)
+    for _, listed_player in pairs(core.players) do
+      restrict_player_to_core_zone(listed_player,core)
     end
   end
 end
@@ -250,8 +275,18 @@ end
 local on_game_created_from_scenario = function(event)
   global.cores = {}
   local prime_core = create_core_at({x=0,y=0})
-  set_core_radius(prime_core,100)
-  set_core_view_area_by_radius(prime_core)
+  prime_core.max_radius = 80
+
+  local chest = game.surfaces[1].create_entity({
+    name='crash-site-chest-2',
+    position = {x=6,y = -3},
+    force = 'player'
+  })
+  chest.minable = false
+  chest.destructible = false
+  chest.insert({name='solar-panel', count=5})
+  chest.insert({name='medium-electric-pole', count=3})
+
 end
 
 local on_gui_click = function(event)
@@ -313,7 +348,14 @@ local on_chunk_charted = function(event)
         end
       end
     end
-    --assert(found,"Charted a core that isnt attached to a core_data: "..tostring(found and found.name))
+  end
+end
+
+local on_tick = function(event)
+  if game.ticks_played % 60 ~= 0 then return end
+
+  for _, core in pairs(global.cores) do
+    check_core_power_levels(core)
   end
 end
 
@@ -325,7 +367,8 @@ local main_events = {
   [defines.events.on_gui_click] = on_gui_click,
   [defines.events.on_player_changed_position] = on_player_changed_position,
   [defines.events.on_chunk_generated] = on_chunk_generated,
-  [defines.events.on_chunk_charted] = on_chunk_charted
+  [defines.events.on_chunk_charted] = on_chunk_charted,
+  [defines.events.on_tick] = on_tick,
 }
 
 handler.add_lib({events= main_events})
