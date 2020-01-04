@@ -123,6 +123,22 @@ local set_core_view_area_by_radius = function(core)
   recreate_core_rendering_objects(core)
 end
 
+local set_core_view_area_by_radius_and_power = function(core)
+  local power_percent = core.structure.energy / (core.structure.prototype.max_energy or 1000)
+  local power_radius = ((core.max_radius - offline_radius) * power_percent) + offline_radius
+  core.view_box = {
+      left_top = {
+        x = core.structure.position.x - power_radius,
+        y = core.structure.position.y - power_radius,
+      },
+      right_bottom = {
+        x = core.structure.position.x + power_radius,
+        y = core.structure.position.y + power_radius,
+      },
+    }
+  recreate_core_rendering_objects(core)
+end
+
 local set_core_radius = function(core,radius)
   core.radius = radius
 end
@@ -213,7 +229,7 @@ local restrict_player_to_core_zone = function(player,core)
 end
 
 local check_core_power_levels = function(core)
-  core.structure.energy = math.max(core.structure.energy - 100,0)
+  core.structure.energy = math.max(core.structure.energy - 6,0)
   if core.has_power == false and core.structure.energy > 0 and core.structure.is_connected_to_electric_network() then
     core.has_power = true
     set_core_radius(core,core.max_radius)
@@ -221,7 +237,13 @@ local check_core_power_levels = function(core)
   elseif core.has_power and (core.structure.energy == 0 or core.structure.is_connected_to_electric_network() == false) then
     core.has_power = false
     set_core_radius(core,offline_radius)
-    set_core_view_area_by_radius(core)
+    set_core_view_area_by_radius_and_power(core)
+    for _, listed_player in pairs(core.players) do
+      restrict_player_to_core_zone(listed_player,core)
+    end
+  end
+  if core.structure.energy < (core.structure.prototype.max_energy or 1000) then
+    set_core_view_area_by_radius_and_power(core)
     for _, listed_player in pairs(core.players) do
       restrict_player_to_core_zone(listed_player,core)
     end
@@ -352,7 +374,7 @@ local on_chunk_charted = function(event)
 end
 
 local on_tick = function(event)
-  if game.ticks_played % 60 ~= 0 then return end
+  if game.ticks_played % 10 ~= 0 then return end
 
   for _, core in pairs(global.cores) do
     check_core_power_levels(core)
