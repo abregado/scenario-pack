@@ -119,17 +119,6 @@ local map_core_for_force = function(core,force)
   })
 end
 
-local find_players_core = function(player)
-  for _, core in pairs(global.cores) do
-    for _, listed_player in pairs(core.players) do
-      if player == listed_player then
-        return core
-      end
-    end
-  end
-  return nil
-end
-
 local discover_core = function(core,force)
   if not force then force = game.forces.player end
   --give_found_core_alert(core,force)
@@ -360,6 +349,15 @@ local find_players_core = function(player)
   return nil
 end
 
+local find_structures_core = function(structure)
+  for _, core in pairs(global.cores) do
+    if structure == core.structure then
+      return core
+    end
+  end
+  return nil
+end
+
 local on_player_created = function(event)
   local player = game.players[event.player_index]
   local character = player.character
@@ -395,10 +393,17 @@ local on_gui_click = function(event)
 end
 
 local on_gui_opened = function(event)
-  local player = game.players[event.player_index]
   if event.entity and event.entity.name == 'crash-site-lab-repaired' then
-    player.opened = nil
-    create_core_gui(player)
+    local player = game.players[event.player_index]
+    local core = find_players_core(player)
+    if event.entity == core.structure then
+      player.opened = nil
+      create_core_gui(player)
+    else
+      player.opened = nil
+      local clicked_core = find_structures_core(event.entity)
+      transfer_player_between_cores(player,core,clicked_core)
+    end
   end
 end
 
