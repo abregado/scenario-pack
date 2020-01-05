@@ -62,6 +62,17 @@ local map_core_for_force = function(core,force)
   })
 end
 
+local find_players_core = function(player)
+  for _, core in pairs(global.cores) do
+    for _, listed_player in pairs(core.players) do
+      if player == listed_player then
+        return core
+      end
+    end
+  end
+  return nil
+end
+
 local discover_core = function(core,force)
   if not force then force = game.forces.player end
   --give_found_core_alert(core,force)
@@ -293,7 +304,6 @@ local on_player_created = function(event)
   local character = player.character
   character.destroy()
   player.character = nil
-  transfer_player_between_cores(player,nil,global.cores[1])
 end
 
 local on_game_created_from_scenario = function(event)
@@ -339,15 +349,9 @@ local on_gui_closed = function(event)
 end
 
 local on_player_changed_position = function(event)
- local player = game.players[event.player_index]
-
-  for _, core in pairs(global.cores) do
-    for _, listed_player in pairs(core.players) do
-      if player == listed_player then
-        restrict_player_to_core_zone(player,core)
-      end
-    end
-  end
+  local player = game.players[event.player_index]
+  local core = find_players_core(player)
+  restrict_player_to_core_zone(player,core)
 end
 
 local on_chunk_generated = function(event)
@@ -385,19 +389,30 @@ end
 
 local on_player_joined_game = function(event)
   local player = game.players[event.player_index]
-
   transfer_player_between_cores(player,nil,global.cores[1])
 end
 
 local on_player_left_game = function(event)
   local player = game.players[event.player_index]
+  local core = find_players_core(player)
+  transfer_player_between_cores(player,core,nil)
+end
 
-  for _, core in pairs(global.cores) do
-    for _, listed_player in pairs(core.players) do
-      if player == listed_player then
-        transfer_player_between_cores(player,core,nil)
-        break
-      end
+local on_built_entity = function(event)
+  if event.created_entity.type == 'assembling-machine' or event.created_entity.type == 'lab' then
+    local player = game.players[event.player_index]
+    local core = find_players_core(player)
+    if not math2d.bounding_box.contains_point(core.view_box,event.created_entity.position) then
+      player.insert(event.stack)
+      player.surface.create_entity{
+        name = "tutorial-flying-text",
+        text = {"flying-text.cannot-be-placed"},
+        position = {
+          event.created_entity.position.x,
+          event.created_entity.position.y - 1.5
+        },
+        color = {r = 1, g = 0.2, b = 0}}
+      event.created_entity.destroy()
     end
   end
 end
@@ -414,6 +429,7 @@ local main_events = {
   [defines.events.on_tick] = on_tick,
   [defines.events.on_player_left_game] = on_player_left_game,
   [defines.events.on_player_joined_game] = on_player_joined_game,
+  [defines.events.on_built_entity] = on_built_entity,
 }
 
 handler.add_lib({events= main_events})
