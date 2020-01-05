@@ -103,10 +103,12 @@ local transfer_player_between_cores = function(player,source,destination)
     end
     recreate_core_rendering_objects(source)
   end
-  table.insert(destination.players,player)
-  retrieve_player_inventory_from_core(player,destination)
-  recreate_core_rendering_objects(destination)
-  player.teleport(destination.structure.position)
+  if destination then
+    table.insert(destination.players,player)
+    retrieve_player_inventory_from_core(player,destination)
+    recreate_core_rendering_objects(destination)
+    player.teleport(destination.structure.position)
+  end
 end
 
 local set_core_view_area_by_radius = function(core)
@@ -381,6 +383,25 @@ local on_tick = function(event)
   end
 end
 
+local on_player_joined_game = function(event)
+  local player = game.players[event.player_index]
+
+  transfer_player_between_cores(player,nil,global.cores[1])
+end
+
+local on_player_left_game = function(event)
+  local player = game.players[event.player_index]
+
+  for _, core in pairs(global.cores) do
+    for _, listed_player in pairs(core.players) do
+      if player == listed_player then
+        transfer_player_between_cores(player,core,nil)
+        break
+      end
+    end
+  end
+end
+
 local main_events = {
   [defines.events.on_player_created] = on_player_created,
   [defines.events.on_game_created_from_scenario] = on_game_created_from_scenario,
@@ -391,6 +412,8 @@ local main_events = {
   [defines.events.on_chunk_generated] = on_chunk_generated,
   [defines.events.on_chunk_charted] = on_chunk_charted,
   [defines.events.on_tick] = on_tick,
+  [defines.events.on_player_left_game] = on_player_left_game,
+  [defines.events.on_player_joined_game] = on_player_joined_game,
 }
 
 handler.add_lib({events= main_events})
