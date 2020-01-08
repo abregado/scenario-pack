@@ -9,10 +9,16 @@ evolution.levels[1] = {
 
   },
   inventory = {
-    --{name='pistol',count=1},
+    {name='pistol',count=1},
     {name='raw-fish',count=3},
-    --{name='light-armor',count=1},
+    {name='light-armor',count=1},
     {name='constant-combinator',count=1},
+  },
+  filters = {
+    'raw-fish',
+    'repair-pack',
+    'gun-turret',
+    'constant-combinator',
   },
   message = "Reloaded: level 1",
 }
@@ -22,6 +28,7 @@ evolution.levels[2] = {
   threshold = 0,
   technology = {},
   inventory = {
+    {name='raw-fish',count=4},
     {name='submachine-gun',count=1},
     {name='shotgun',count=1},
     {name='shotgun-shell',count=50},
@@ -29,6 +36,10 @@ evolution.levels[2] = {
     {name='gun-turret',count=1},
     {name='repair-pack',count=10},
     {name='firearm-magazine',count=200},
+  },
+  remove = {
+    'pistol',
+    'light-armor'
   },
   message = "Tech upgraded: Better weapons and armor",
 }
@@ -40,7 +51,9 @@ evolution.levels[3] = {
     'weapon-shooting-speed-1',
     'physical-projectile-damage-1',
   },
-  inventory = {},
+  inventory = {
+    {name='raw-fish',count=5},
+  },
   message = "Tech upgraded: more dps",
 }
 
@@ -48,6 +61,7 @@ evolution.levels[4] = {
   name="green",
   threshold = 15,
   inventory = {
+    {name='raw-fish',count=6},
     {name='piercing-rounds-magazine',count=200},
     {name='grenade',count=50},
     {name='car',count=1},
@@ -60,7 +74,9 @@ evolution.levels[4] = {
 evolution.levels[5] = {
   name="green-plus",
   threshold = 19,
-  inventory = {},
+  inventory = {
+    {name='raw-fish',count=8},
+  },
   technology = {
     'physical-projectile-damage-2',
     'stronger-explosives-1',
@@ -72,7 +88,9 @@ evolution.levels[5] = {
 evolution.levels[6] = {
   name="black",
   threshold = 23,
-  inventory = {},
+  inventory = {
+    {name='raw-fish',count=10},
+  },
   technology = {
     'stronger-explosives-2',
     'weapon-shooting-speed-3',
@@ -84,7 +102,9 @@ evolution.levels[6] = {
 evolution.levels[7] = {
   name="black-plus",
   threshold = 30,
-  inventory = {},
+  inventory = {
+    {name='raw-fish',count=12},
+  },
   technology = {
     'weapon-shooting-speed-4',
     'physical-projectile-damage-4',
@@ -122,7 +142,9 @@ evolution.levels[8] = {
 evolution.levels[9] = {
   name="oil-two",
   threshold = 45,
-  inventory = {},
+  inventory = {
+    {name='raw-fish',count=14},
+  },
   technology = {
     'follower-robot-count-1',
     'refined-flammables-1',
@@ -401,7 +423,24 @@ evolution.set_player_package = function(player,package_index)
         print("Couldnt find technology: "..tech)
       end
     end
-    
+
+    --set_filters
+    if package.filters then
+      for s = 1, 20 do
+        if package.filters[s] and game.item_prototypes[package.filters[s]] then
+          player.set_quick_bar_slot(s,package.filters[s])
+        end
+      end
+    end
+
+    --clear old items
+    if package.remove then
+      for _, item_name in pairs(package.remove) do
+        player.remove_item({name=item_name,count=1000})
+      end
+    end
+
+    --add new items
     for _, item in pairs(package.inventory) do
       if game.item_prototypes[item.name] then
         local current_count = player.get_item_count(item.name) 

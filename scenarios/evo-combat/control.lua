@@ -39,6 +39,15 @@ local new_player_data = function(name)
     name = name,
     next_reload = 0,
     respawn_point = game.forces.player.get_spawn_position(game.surfaces[1]),
+    respawn_marker = rendering.draw_circle({
+      surface = game.players[name].surface,
+      color = game.players[name].color,
+      radius = 0.5,
+      target = game.forces.player.get_spawn_position(game.surfaces[1]),
+      players = {game.players[name]},
+      draw_on_ground = true,
+      filled = true,
+    })
   }
 end
 
@@ -112,6 +121,8 @@ local on_built_entity =  function(event)
   if ent.name == "constant-combinator" then
     player.force.set_spawn_position(ent.position,player.surface)
     global.combat_evo_data.player_list[player.name].respawn_point = ent.position
+    rendering.set_target(global.combat_evo_data.player_list[player.name].respawn_marker,ent.position)
+    rendering.set_color(global.combat_evo_data.player_list[player.name].respawn_marker,player.color)
     ent.destroy()
     player.insert({name='constant-combinator',count=1})
     player.print({"spawn-point.personal-set"})
@@ -159,6 +170,7 @@ local on_player_created = function(event)
 
   local player = game.players[event.player_index]
   global.combat_evo_data.player_list[player.name] = new_player_data(player.name)
+
   reset_cooldown(player)
 end
 
