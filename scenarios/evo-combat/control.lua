@@ -155,7 +155,7 @@ local on_player_created = function(event)
   clear_player_recipes()
 
   local r = 200
-  player.force.chart(player.surface, {{player.position.x - r, player.position.y - r}, {player.position.x + r, player.position.y + r}})
+  --player.force.chart(player.surface, {{player.position.x - r, player.position.y - r}, {player.position.x + r, player.position.y + r}})
 
   local player = game.players[event.player_index]
   global.combat_evo_data.player_list[player.name] = new_player_data(player.name)
@@ -171,12 +171,22 @@ local on_player_respawned = function(event)
   player.teleport(global.combat_evo_data.player_list[player.name].respawn_point)
 end
 
+local on_chunk_generated = function(event)
+  if event.surface.count_entities_filtered({
+    force = 'enemy',
+    area = event.area,
+  }) > 0 then
+    game.forces.player.chart(event.surface,event.area)
+  end
+end
+
 local main_events = {
   [defines.events.on_game_created_from_scenario] = on_game_created_from_scenario,
   [defines.events.on_player_created] = on_player_created,
   [defines.events.on_player_respawned] = on_player_respawned,
   [defines.events.on_built_entity] = on_built_entity,
   [defines.events.on_entity_damaged] = on_entity_damaged,
+  [defines.events.on_chunk_generated] = on_chunk_generated,
   [defines.events.on_tick] = on_tick,
 }
 
