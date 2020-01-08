@@ -1,34 +1,12 @@
 local handler = require("event_handler")
 local math2d = require("math2d")
+local lab_storage = require("lab_storage")
 
 local core_names = {
   "Prime",
-  "Secundus",
-  "Tertius",
-  "Four",
-  "Five",
-  "Six",
 }
 
 local offline_radius = 10
-
-local find_core_with_lab_space = function()
-  for _, core in pairs(global.cores) do
-    if #core.empty_labs > 0 then
-      return core
-    end
-  end
-  return nil
-end
-
-local reassign_stored_technologies = function(core)
-  for _, data in pairs(core.stored_technologies) do
-    if not data.lab and #core.empty_labs > 0 then
-      data.lab = core.empty_labs[1]
-      table.remove(core.empty_labs,1)
-    end
-  end
-end
 
 local clear_all_ids_at_core = function(core)
   for _, id in pairs(core.overlay_ids) do
@@ -61,44 +39,6 @@ local recreate_core_rendering_objects = function(core)
       surface = game.surfaces[1]
     })
     table.insert(core.overlay_ids,name_id)
-  end
-
-  for tech_name, data in pairs(core.stored_technologies) do
-    if data.lab then
-      local tech_id = rendering.draw_text({
-        text = {"technology-name."..tech_name},
-        color = {1,0,0},
-        target = data.lab.position,
-        surface = game.surfaces[1],
-        alignment='center'
-      })
-      table.insert(core.overlay_ids,tech_id)
-      local filled_lab_box = rendering.draw_rectangle({
-        color = {1,0,0},
-        left_top = data.lab.bounding_box.left_top,
-        right_bottom = data.lab.bounding_box.right_bottom,
-        surface = game.surfaces[1]
-      })
-      table.insert(core.overlay_ids,filled_lab_box)
-    end
-  end
-
-  for _, lab in pairs(core.empty_labs) do
-    local tech_id = rendering.draw_text({
-      text = {"overlay.ready-for-tech"},
-      color = {0,1,0},
-      target = lab.position,
-      surface = game.surfaces[1],
-      alignment='center'
-    })
-    table.insert(core.overlay_ids,tech_id)
-    local filled_lab_box = rendering.draw_rectangle({
-      color = {0,1,0},
-      left_top = lab.bounding_box.left_top,
-      right_bottom = lab.bounding_box.right_bottom,
-      surface = game.surfaces[1]
-    })
-    table.insert(core.overlay_ids,filled_lab_box)
   end
 
   for _, id in pairs(core.overlay_ids) do
@@ -252,10 +192,6 @@ local create_core_at = function(position,area)
     inventories = {},
     has_power = false,
     discovered = false,
-    technology_capacity = 0,
-    currently_researching = false,
-    stored_technologies = {},
-    empty_labs = {},
   }
   set_core_view_area_by_radius(core_data)
   table.insert(global.cores,core_data)
@@ -351,7 +287,16 @@ end
 
 local find_structures_core = function(structure)
   for _, core in pairs(global.cores) do
-    if structure == core.structure then
+    if structure.position == core.structure.position then
+      return core
+    end
+  end
+  return nil
+end
+
+local find_entities_core = function(entity)
+  for _, core in pairs(global.cores) do
+    if math2d.bounding_box.contains_point(core.view_box,entity.position) then
       return core
     end
   end
@@ -464,6 +409,7 @@ local on_player_left_game = function(event)
   transfer_player_between_cores(player,core,nil)
 end
 
+
 local on_built_entity = function(event)
   if event.created_entity.type == 'assembling-machine' or event.created_entity.type == 'lab' then
     local player = game.players[event.player_index]
@@ -479,72 +425,7 @@ local on_built_entity = function(event)
         },
         color = {r = 1, g = 0.2, b = 0}}
       event.created_entity.destroy()
-    elseif event.created_entity.type == 'lab' then
-      table.insert(core.empty_labs,event.created_entity)
-      recreate_core_rendering_objects(core)
     end
-  end
-end
-
-local on_player_mined_entity = function(event)
-  if event.entity.type == 'lab' then
-    local player = game.players[event.player_index]
-    local core = find_players_core(player)
-    local linked_tech = nil
-    for techname, data in pairs(core.stored_technologies) do
-      if data.lab == event.entity then
-        linked_tech = data
-      end
-    end
-
-    if linked_tech and #core.empty_labs == 0 then
-      local new_lab = player.surface.create_entity({
-        force = event.entity.force,
-        position = event.entity.position,
-        name = event.entity.name,
-      })
-      linked_tech.lab = new_lab
-      player.surface.create_entity{
-        name = "tutorial-flying-text",
-        text = {"flying-text.not-minable-contains-tech"},
-        position = {
-          event.entity.position.x,
-          event.entity.position.y - 1.5
-        },
-        color = {r = 1, g = 0.2, b = 0}}
-    elseif linked_tech then
-      linked_tech.lab = nil
-      reassign_stored_technologies(core)
-    else
-      for index, lab in pairs(core.empty_labs) do
-        if lab == event.entity then
-          table.remove(core.empty_labs,index)
-        end
-        recreate_core_rendering_objects(core)
-      end
-    end
-  end
-end
-
-local on_research_started = function(event)
-  local core = find_core_with_lab_space()
-  if not core then
-    event.research.force.cancel_current_research()
-    game.print({"warnings.research-cancelled-no-storage"})
-  end
-end
-
-local on_research_finished = function(event)
-  local core = find_core_with_lab_space()
-  if core then
-    core.stored_technologies[event.research.name] = {lab=nil,tech=event.research.name}
-    reassign_stored_technologies(core)
-    game.print({"warnings.research-complete-stored-at",core.name})
-    recreate_core_rendering_objects(core)
-  else
-    event.research.researched = false
-    game.forces.player.set_saved_technology_progress(event.research,0.999)
-    game.print({"warnings.research-cancelled-no-storage"})
   end
 end
 
@@ -561,9 +442,7 @@ local main_events = {
   [defines.events.on_player_left_game] = on_player_left_game,
   [defines.events.on_player_joined_game] = on_player_joined_game,
   [defines.events.on_built_entity] = on_built_entity,
-  [defines.events.on_player_mined_entity] = on_player_mined_entity,
-  [defines.events.on_research_finished] = on_research_finished,
-  [defines.events.on_research_started] = on_research_started,
 }
 
 handler.add_lib({events= main_events})
+handler.add_lib(lab_storage)
