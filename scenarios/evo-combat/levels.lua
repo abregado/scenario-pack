@@ -5,20 +5,21 @@ evolution.levels = {}
 evolution.levels[1] = {
   name="starting",
   threshold = 0,
-  technology = {},
+  technology = {
+
+  },
   inventory = {
-    {name='pistol',count=1},
+    --{name='pistol',count=1},
     {name='raw-fish',count=3},
-    {name='firearm-magazine',count=200},
-    {name='light-armor',count=1},
+    --{name='light-armor',count=1},
     {name='constant-combinator',count=1},
   },
-  message = "Given loadout 1: starter equipment",
+  message = "Reloaded: level 1",
 }
 
 evolution.levels[2] = {
   name="red",
-  threshold = 1,
+  threshold = 0,
   technology = {},
   inventory = {
     {name='submachine-gun',count=1},
@@ -27,8 +28,9 @@ evolution.levels[2] = {
     {name='heavy-armor',count=1},
     {name='gun-turret',count=1},
     {name='repair-pack',count=10},
+    {name='firearm-magazine',count=200},
   },
-  message = "Red Science Upgrades incoming: submachine gun + shotgun",
+  message = "Tech upgraded: Better weapons and armor",
 }
 
 evolution.levels[3] = {
@@ -39,7 +41,7 @@ evolution.levels[3] = {
     'physical-projectile-damage-1',
   },
   inventory = {},
-  message = "Red Science Plus Upgrades incoming: damage and shooting speed",
+  message = "Tech upgraded: more dps",
 }
 
 evolution.levels[4] = {
@@ -418,7 +420,7 @@ evolution.set_player_package = function(player,package_index)
   end
   
   if reloaded then
-    player.print("Loadout refilled")
+    player.print("Reloaded: tech level "..package_index-1)
   end
 end
 

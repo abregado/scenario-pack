@@ -1,4 +1,6 @@
 local util = require("util")
+local handler = require("event_handler")
+local math2d = require("math2d")
 local evolution_levels = require("levels")
 
 local clear_player_recipes = function()
@@ -47,45 +49,61 @@ local reset_cooldown = function(player)
   global.combat_evo_data.player_list[player.name].next_reload = game.ticks_played + global.combat_evo_data.cooldown
 end
 
-local on_load = function(event)
+local evo_skip = function(data)
+  local player = game.players[data.player_index]
+  if type(tonumber(data.parameter)) == 'number' and (tonumber(data.parameter) >= 0 and tonumber(data.parameter) <= 100) then
+    local new_evo = 0
+    if tonumber(data.parameter) > 0 then
+      new_evo = tonumber(data.parameter)/100
+    end
+    game.forces.enemy.evolution_factor = new_evo
+    evolution_levels.reload_all_players()
+    clear_player_recipes()
+  else
+    player.print({"evolution-skip-command.error-number-out-of-range"})
+  end
+end
+
+local loadout_skip = function(data)
+  local player = game.players[data.player_index]
+  if data.parameter then
+    local result = evolution_levels.set_evo_to_package(tonumber(data.parameter))
+    if result then
+      return true
+    end
+  else
+    local result = evolution_levels.set_evo_to_package(global.current_level + 1)
+    if result then
+      return true
+    end
+  end
+  player.print({"",{"loadout-skip-command.error-non-existant-loadout"},evolution_levels.loadout_list()})
+  return false
+end
+
+local on_created_or_loaded = function()
+  commands.add_command("skipevo",{"evolution-skip-command.description"},evo_skip)
+  commands.add_command("skiploadout",{"loadout-skip-command.description"},loadout_skip)
+end
+
+local on_game_created_from_scenario = function()
+  global.current_level = 3
   global.combat_evo_data = {
-    player_list = {},
-    cooldown = 30*60,
+  player_list = {},
+  cooldown = 30*60,
   }
 
-  --for name, technology in pairs(game.forces.player.technologies) do
-  --  local special_effect = false
-  --  technology.enabled = false
-  --  for _, effect in pairs(technology.effects) do
-  --    if effect.type == "unlock-recipe" or
-  --      effect.type == "train-braking-force-bonus" or
-  --      effect.type == "character-inventory-bonus" or
-  --      effect.type == "nothing" or
-  --      effect.type == "give-item" or
-  --      effect.type == "ghost-time-to-live" or
-  --      effect.type == "worker-robot-battery" or
-  --      effect.type == "worker-robot-speed" or
-  --      effect.type == "worker-robot-storage" or
-  --      effect.type == "stack-inserter-capacity-bonus" or
-  --      effect.type == "character-logistic-trash-slots" or
-  --      effect.type == "character-logistic-slots" or
-  --      effect.type == "character-mining-speed" or
-  --      effect.type == "mining-drill-productivity-bonus" or
-  --      effect.type == "laboratory-speed" then
-  --      --do nothing
-  --    else
-  --      special_effect = true
-  --    end
-  --  end
-  --  if special_effect then
-  --    local techrow = name..','
-  --    for _,ingredient in pairs(technology.research_unit_ingredients) do
-  --      techrow = techrow .. ingredient.name .. ','
-  --    end
-  --    print(techrow)
-  --  end
-  --end
   clear_player_recipes()
+  on_created_or_loaded()
+
+  game.map_settings.enemy_evolution.time_factor = 0.00002
+  game.map_settings.enemy_evolution.destroy_factor = 0.01
+  game.map_settings.enemy_evolution.pollution_factor = 0
+
+  for _, technology in pairs(game.forces.player.technologies) do
+    technology.enabled = false
+  end
+
 end
 
 local on_built_entity =  function(event)
@@ -102,7 +120,7 @@ end
 
 local on_entity_damaged =  function(event)
   if event.entity.force == game.forces['enemy'] then
-    if event.cause.force == game.forces['player'] then
+    if event.cause and event.cause.force == game.forces['player'] then
       if event.cause.name == 'character' then
         reset_cooldown(event.cause.player)
       elseif event.cause.last_user then
@@ -153,55 +171,16 @@ local on_player_respawned = function(event)
   player.teleport(global.combat_evo_data.player_list[player.name].respawn_point)
 end
 
-local evo_skip = function(data)
-  local player = game.players[data.player_index]
-  if type(tonumber(data.parameter)) == 'number' and (tonumber(data.parameter) >= 0 and tonumber(data.parameter) <= 100) then
-    local new_evo = 0
-    if tonumber(data.parameter) > 0 then
-      new_evo = tonumber(data.parameter)/100
-    end
-    game.forces.enemy.evolution_factor = new_evo
-    evolution_levels.reload_all_players()
-    clear_player_recipes()
-  else
-    player.print({"evolution-skip-command.error-number-out-of-range"})
-  end
-end
+local main_events = {
+  [defines.events.on_game_created_from_scenario] = on_game_created_from_scenario,
+  [defines.events.on_player_created] = on_player_created,
+  [defines.events.on_player_respawned] = on_player_respawned,
+  [defines.events.on_built_entity] = on_built_entity,
+  [defines.events.on_entity_damaged] = on_entity_damaged,
+  [defines.events.on_tick] = on_tick,
+}
 
-local loadout_skip = function(data)
-  local player = game.players[data.player_index]
-  if data.parameter then
-    local result = evolution_levels.set_evo_to_package(tonumber(data.parameter))
-    if result then
-      return true
-    end
-  else
-    local result = evolution_levels.set_evo_to_package(global.current_level + 1)
-    if result then
-      return true
-    end
-  end
-  player.print({"",{"loadout-skip-command.error-non-existant-loadout"},evolution_levels.loadout_list()})
-  return false
-end
+handler.add_lib({events= main_events})
 
+script.on_load(on_created_or_loaded)
 
-script.on_load(function()
-  commands.add_command("skipevo",{"evolution-skip-command.description"},evo_skip)
-  commands.add_command("skiploadout",{"loadout-skip-command.description"},loadout_skip)
-  commands.add_command("init","run to reset the game",on_load)
-end)
-
-script.on_init(function()
-  global.current_level = 1
-  commands.add_command("skipevo",{"evolution-skip-command.description"},evo_skip)
-  commands.add_command("skiploadout",{"loadout-skip-command.description"},loadout_skip)
-  commands.add_command("init","run to reset the game",on_load)
-end)
-
-script.on_event(defines.events.on_entity_damaged,on_entity_damaged)
-script.on_event(defines.events.on_tick,on_tick)
-script.on_event(defines.events.on_player_respawned,on_player_respawned)
-script.on_event(defines.events.on_player_created,on_player_created)
-script.on_event(defines.events.on_built_entity, on_built_entity)
-script.on_event(defines.events.on_game_created_from_scenario, on_load)
