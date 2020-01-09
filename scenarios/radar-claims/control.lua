@@ -152,10 +152,10 @@ local deny_removal = function(event,message,do_filtering)
 
     }
     for _, name in pairs(allowed_names) do
-      if event.created_entity.name == name then allowed = true end
+      if event.entity.name == name then allowed = true end
     end
     for _, type_name in pairs(allowed_types) do
-      if event.created_entity.type == type_name then allowed = true end
+      if event.entity.type == type_name then allowed = true end
     end
   end
   if allowed == false then
@@ -165,8 +165,8 @@ local deny_removal = function(event,message,do_filtering)
       name = "tutorial-flying-text",
       text = message,
       position = {
-        event.created_entity.position.x,
-        event.created_entity.position.y - 1.5
+        event.entity.position.x,
+        event.entity.position.y - 1.5
       },
       color = {r = 1, g = 0.2, b = 0}}
     player.surface.clone_entities({
@@ -201,7 +201,17 @@ local deny_building = function(event,message,do_filtering)
     end
   end
   if allowed == false then
-
+    local player = game.players[event.player_index]
+    player.insert(event.stack)
+    player.surface.create_entity{
+      name = "tutorial-flying-text",
+      text = message,
+      position = {
+        event.created_entity.position.x,
+        event.created_entity.position.y - 1.5
+      },
+      color = {r = 1, g = 0.2, b = 0}}
+    event.created_entity.destroy()
     return false
   end
   return true
@@ -221,7 +231,9 @@ local on_game_created_from_scenario = function()
   global.radar_claim_data.claims = {}
   global.radar_claim_data.settings = {
     allow_placement_in_unclaimed_chunks = true,
-    allow_remove_from_unclaimed_chunks = false,
+    allow_remove_from_unclaimed_chunks = true,
+    allow_remove_radars_from_inactive_claims = true,
+    allow_removal_from_others_claims = true,
     allow_placement_in_others_claims = false,
     radar_power_check_frequency = 60,
   }
@@ -237,11 +249,6 @@ local on_built_entity =  function(event)
     continue = deny_building(event,{'flying-text.no-building-outside-claims'},true)
   end
 
-  if continue and global.radar_claim_data.settings.allow_placement_in_others_claims == false and
-    claim and claim.force ~= event.created_entity.force.name then
-    continue = deny_building(event,{'flying-text.no-building-in-others-claims'})
-  end
-
   if continue and event.created_entity.name == 'radar' then
     local claim = find_claim_at_position(event.created_entity.position,true)
     if claim then
@@ -255,15 +262,21 @@ local on_built_entity =  function(event)
 end
 
 local on_player_mined_entity = function(event)
+  local player = game.players[event.player_index]
   local active_claim = find_claim_at_position(event.entity.position)
   local claim = find_claim_at_position(event.entity.position,true)
   local continue = true
+
   if continue and global.radar_claim_data.settings.allow_remove_from_unclaimed_chunks == false and claim == nil then
-    continue = deny_removal(event,{})
+    continue = deny_removal(event,{'flying-text.no-removal-in-unclaimed-chunk'},true)
   end
 
+  if continue and global.radar_claim_data.settings.allow_removal_from_others_claims == false and
+    active_claim and player.force.name ~= active_claim.force then
+    continue = deny_removal(event,{'flying-text.no-removal-in-others-claim'})
+  end
 
-  if event.entity.name == 'radar' then
+  if continue and event.entity.name == 'radar' then
     local claim = find_claim_at_position(event.entity.position)
     if claim then
       remove_radar_from_claim(event.entity,claim)
