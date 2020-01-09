@@ -222,6 +222,21 @@ local new_claim_using_event = function(event)
   table.insert(global.radar_claim_data.claims,claim)
 end
 
+local find_closest_claim_on_force = function(position,force_name)
+  local closest = nil
+  local distance = 999999
+  for _, claim in pairs(global.radar_claim_data.claims) do
+    if force_name == claim.force then
+      game.print("found claim with force")
+      if math2d.position.distance(math2d.bounding_box.get_centre(claim.area),position) < distance then
+        game.print("found closer")
+        closest = claim
+      end
+    end
+  end
+  return closest
+end
+
 local on_created_or_loaded = function()
 
 end
@@ -264,9 +279,6 @@ local on_built_entity =  function(event)
       end
     end
   end
-
-
-  --TODO disallow joining of different forces electric networks
 end
 
 local on_player_mined_entity = function(event)
@@ -294,7 +306,10 @@ end
 
 local on_player_created = function(event)
   local player = game.players[event.player_index]
-  --TODO move player to closest radar on their force
+  local claim = find_closest_claim_on_force(player.position,player.force.name)
+  if claim then
+    player.teleport(player.surface.find_non_colliding_position_in_box('character',claim.area,0.1))
+  end
   player.insert({name='solar-panel',count=10})
   player.insert({name='radar',count=4})
   player.insert({name='medium-electric-pole',count=4})
@@ -310,7 +325,13 @@ local on_entity_cloned = function(event)
 end
 
 local on_player_respawned = function(event)
-  --TODO respawn at closest radar
+  local player = game.players[event.player_index]
+
+  local claim = find_closest_claim_on_force(player.character.position,player.force.name)
+  if claim then
+    game.print("respawning with claim")
+    player.teleport(player.surface.find_non_colliding_position_in_box('character',claim.area,0.1))
+  end
 end
 
 local on_tick = function()
