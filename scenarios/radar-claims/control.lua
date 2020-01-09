@@ -249,14 +249,22 @@ local on_built_entity =  function(event)
     continue = deny_building(event,{'flying-text.no-building-outside-claims'},true)
   end
 
-  if continue and event.created_entity.name == 'radar' then
+  if continue and event.created_entity.type == 'radar' then
     local claim = find_claim_at_position(event.created_entity.position,true)
     if claim then
       add_radar_to_claim(event.created_entity,claim)
     else
       new_claim_using_event(event)
     end
+  elseif continue and event.created_entity.type== 'electric-pole' then
+    local neighbours = event.created_entity.neighbours
+    for index, neighbour in pairs(neighbours.copper) do
+      if neighbour.force ~= event.created_entity.force then
+        event.created_entity.disconnect_neighbour(neighbour)
+      end
+    end
   end
+
 
   --TODO disallow joining of different forces electric networks
 end
