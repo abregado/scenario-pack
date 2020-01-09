@@ -141,6 +141,43 @@ local check_claim_is_active = function(claim)
   return claim.active
 end
 
+local deny_removal = function(event,message,do_filtering)
+  local allowed = false
+  if do_filtering then
+    local allowed_types = {
+      'tree',
+      'rock'
+    }
+    local allowed_names = {
+
+    }
+    for _, name in pairs(allowed_names) do
+      if event.created_entity.name == name then allowed = true end
+    end
+    for _, type_name in pairs(allowed_types) do
+      if event.created_entity.type == type_name then allowed = true end
+    end
+  end
+  if allowed == false then
+    local player = game.players[event.player_index]
+    event.buffer.clear()
+    player.surface.create_entity{
+      name = "tutorial-flying-text",
+      text = message,
+      position = {
+        event.created_entity.position.x,
+        event.created_entity.position.y - 1.5
+      },
+      color = {r = 1, g = 0.2, b = 0}}
+    player.surface.clone_entities({
+      entities = {event.entity},
+      destination_offset = {0.0,0.0},
+    })
+    return false
+  end
+  return true
+end
+
 local deny_building = function(event,message,do_filtering)
   local allowed = false
   if do_filtering then
@@ -164,24 +201,13 @@ local deny_building = function(event,message,do_filtering)
     end
   end
   if allowed == false then
-    local player = game.players[event.player_index]
-    player.insert(event.stack)
-    player.surface.create_entity{
-      name = "tutorial-flying-text",
-      text = message,
-      position = {
-        event.created_entity.position.x,
-        event.created_entity.position.y - 1.5
-      },
-      color = {r = 1, g = 0.2, b = 0}}
-    event.created_entity.destroy()
+
     return false
   end
   return true
 end
 
 local new_claim_using_event = function(event)
-  local player = game.players[event.player_index]
   local claim = new_claim_data(event.created_entity)
   table.insert(global.radar_claim_data.claims,claim)
 end
@@ -195,6 +221,7 @@ local on_game_created_from_scenario = function()
   global.radar_claim_data.claims = {}
   global.radar_claim_data.settings = {
     allow_placement_in_unclaimed_chunks = true,
+    allow_remove_from_unclaimed_chunks = false,
     allow_placement_in_others_claims = false,
     radar_power_check_frequency = 60,
   }
@@ -215,7 +242,6 @@ local on_built_entity =  function(event)
     continue = deny_building(event,{'flying-text.no-building-in-others-claims'})
   end
 
-
   if continue and event.created_entity.name == 'radar' then
     local claim = find_claim_at_position(event.created_entity.position,true)
     if claim then
@@ -225,12 +251,18 @@ local on_built_entity =  function(event)
     end
   end
 
-  --TODO only allow if player owns chunk
   --TODO disallow joining of different forces electric networks
 end
 
 local on_player_mined_entity = function(event)
-  --TODO only allow if player owns chunk
+  local active_claim = find_claim_at_position(event.entity.position)
+  local claim = find_claim_at_position(event.entity.position,true)
+  local continue = true
+  if continue and global.radar_claim_data.settings.allow_remove_from_unclaimed_chunks == false and claim == nil then
+    continue = deny_removal(event,{})
+  end
+
+
   if event.entity.name == 'radar' then
     local claim = find_claim_at_position(event.entity.position)
     if claim then
@@ -245,6 +277,15 @@ local on_player_created = function(event)
   player.insert({name='solar-panel',count=10})
   player.insert({name='radar',count=4})
   player.insert({name='medium-electric-pole',count=4})
+end
+
+local on_entity_cloned = function(event)
+  local claim = find_claim_at_position(event.destination.position,true)
+  if claim and event.destination.type == 'radar' then
+    add_radar_to_claim(event.destination,claim)
+  elseif event.destination.type == 'radar' then
+    new_claim_using_event({created_entity=event.destination})
+  end
 end
 
 local on_player_respawned = function(event)
@@ -265,6 +306,7 @@ local main_events = {
   [defines.events.on_built_entity] = on_built_entity,
   [defines.events.on_player_mined_entity] = on_player_mined_entity,
   [defines.events.on_tick] = on_tick,
+  [defines.events.on_entity_cloned] = on_entity_cloned,
 }
 
 handler.add_lib({events= main_events})
