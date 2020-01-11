@@ -242,6 +242,69 @@ local find_closest_claim_on_force = function(position,force_name)
   return closest
 end
 
+local tally_claims = function()
+  local tally = {}
+  for _, claim in pairs(global.radar_claim_data.claims) do
+    if claim.active then
+      if tally[claim.force] then
+        tally[claim.force] = tally[claim.force] + 1
+      else
+        tally[claim.force] = 1
+      end
+    end
+  end
+  table.sort(tally,function(a,b) return a < b; end)
+  return tally
+end
+
+local create_claims_highscore = function(player)
+  if player.gui.left.claims then
+    player.gui.left.claims.destroy()
+  end
+
+  local frame = player.gui.left.add({
+    type = 'frame',
+    name = 'claims',
+    caption = {'radar-claims-gui.heading'},
+    direction = 'vertical'
+  })
+
+  local list = frame.add({
+    type='table',
+    name='score_table',
+    column_count = 2,
+    draw_horizontal_lines = true
+  })
+
+  local name_header = list.add({
+    type = 'label',
+    name = 'team-header',
+    caption = {'radar-claims-gui.team-header'},
+  })
+  name_header.style.width = 150
+  local score_header = list.add({
+    type = 'label',
+    name = 'score-header',
+    caption = {'radar-claims-gui.score-header'},
+  })
+  score_header.style.width = 50
+
+
+  for force_name, score in pairs(tally_claims()) do
+    list.add({
+      type = 'label',
+      name=force_name..'-name',
+      caption = force_name,
+    })
+    list.add({
+      type = 'label',
+      name=force_name..'-count',
+      caption = score,
+    })
+  end
+
+end
+
 local on_game_created_from_scenario = function()
   global.radar_claim_data = {}
   global.radar_claim_data.claims = {}
@@ -252,6 +315,7 @@ local on_game_created_from_scenario = function()
     allow_removal_from_others_claims = true,
     allow_placement_in_others_claims = false,
     radar_power_check_frequency = 60,
+    update_gui_frequency = 3600,
   }
 end
 
@@ -346,6 +410,12 @@ local on_tick = function()
   for _, claim in pairs(global.radar_claim_data.claims) do
     check_claim_is_active(claim)
   end
+  if game.ticks_played % global.radar_claim_data.settings.update_gui_frequency ~= 0 then
+    for _, player in pairs(game.players) do
+      create_claims_highscore(player)
+    end
+  end
+
 end
 
 local claims = {}
