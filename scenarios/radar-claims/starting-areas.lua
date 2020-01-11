@@ -1,5 +1,3 @@
-local starting_areas = {}
-
 local show_creation_gui = function(player)
   local frame = player.gui.center.add({
     type = 'frame',
@@ -63,6 +61,32 @@ local row_with_areas = function(length)
   return row
 end
 
+local request_generate_mapped_chunks = function()
+  local map = global.starting_areas_data.map
+  for x, row in pairs(map) do
+    for y, state in pairs(row) do
+      game.surfaces[1].request_to_generate_chunks({
+        x = x,
+        y = y,
+      },3)
+    end
+  end
+  game.surfaces[1].force_generate_chunk_requests()
+end
+
+local destroy_mapped_chunks = function()
+  local map = global.starting_areas_data.map
+  for x, row in pairs(map) do
+    for y, state in pairs(row) do
+      game.surfaces[1].delete_chunk({
+        x = x,
+        y = y,
+      })
+    end
+  end
+  request_generate_mapped_chunks()
+end
+
 local generate_map = function(areas)
   local per_side = math.ceil(areas/4)
   local spacing = 1
@@ -82,59 +106,29 @@ local generate_map = function(areas)
   end
 
   global.starting_areas_data.map = map
-end
+  global.starting_areas_data.generated = true
 
-local destroy_mapped_chunks = function()
-  local map = global.starting_areas_data.map
   for x, row in pairs(map) do
     for y, state in pairs(row) do
-      game.surfaces[1].delete_chunk({
-        x = x,
-        y = y,
-      })
-      --rendering.draw_rectangle({
-      --  color = (state == 0 and {1,0,0}) or {0,1,0},
-      --  left_top = {
-      --    x = (x)*32,
-      --    y = (y)*32,
-      --  },
-      --  right_bottom = {
-      --    x = (x)*32+32,
-      --    y = (y)*32+32,
-      --  },
-      --  surface = game.surfaces[1]
-      --})
+      if state == 1 then
+        table.insert(global.starting_areas_data.areas,{generated=false,position = {x=x,y=y},area={
+          left_top = {
+            x = x * 32,
+            y = y * 32
+          },
+          right_bottom = {
+            x = x * 32+32,
+            y = y * 32+32
+          },
+        },owner='none'})
+      end
     end
   end
-end
 
-local request_generate_mapped_chunks = function()
-  local map = global.starting_areas_data.map
-  for x, row in pairs(map) do
-    for y, state in pairs(row) do
-      game.surfaces[1].request_to_generate_chunks({
-        x = x,
-        y = y,
-      },3)
-    end
-  end
-  game.surfaces[1].force_generate_chunk_requests()
+  destroy_mapped_chunks()
 end
 
 local build_starting_area = function(surface,area)
-  local resource_list = {
-    'iron-ore',
-    'iron-ore',
-    'iron-ore',
-    'iron-ore',
-    'iron-ore',
-    'copper-ore',
-    'copper-ore',
-    'stone',
-    'coal',
-    'coal',
-  }
-
   for x=2,16 do
     for y=2,3 do
       local res = surface.create_entity({
@@ -201,7 +195,6 @@ local build_starting_area = function(surface,area)
   end
   surface.set_tiles(water)
 
-  table.insert(global.starting_areas_data.areas,area)
 end
 
 local on_game_created_from_scenario = function()
@@ -209,11 +202,11 @@ local on_game_created_from_scenario = function()
   global.starting_areas_data.map = {}
   global.starting_areas_data.areas = {}
   global.starting_areas_data.generated = false
-end
+  end
 
 local on_player_created = function(event)
   local player = game.players[event.player_index]
-  if event.player_index == 1 then
+  if event.player_index == 1 and global.starting_areas_data.generated == false then
     show_creation_gui(player)
   end
 
@@ -231,6 +224,16 @@ local on_gui_click = function(event)
     request_generate_mapped_chunks()
     clicked.parent.destroy()
   end
+end
+
+local find_unoccupied_starting_area = function()
+  game.print(#global.starting_areas_data.areas)
+  for _, area_data in pairs(global.starting_areas_data.areas) do
+    if area_data.owner == 'none' then
+      return area_data
+    end
+  end
+  return nil
 end
 
 local on_chunk_generated = function(event)
@@ -255,9 +258,15 @@ local on_chunk_generated = function(event)
         event.surface.destroy_decoratives({area=event.area})
         build_starting_area(event.surface,event.area)
       end
+      game.forces.player.chart(event.surface,event.area)
     end
   end
 end
+
+local starting_areas = {}
+
+starting_areas.find_unoccupied_starting_area = find_unoccupied_starting_area
+starting_areas.generate_map = generate_map
 
 starting_areas.events = {
   [defines.events.on_game_created_from_scenario] = on_game_created_from_scenario,

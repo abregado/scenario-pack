@@ -213,6 +213,18 @@ end
 local new_claim_using_event = function(event)
   local claim = new_claim_data(event.created_entity)
   table.insert(global.radar_claim_data.claims,claim)
+  return claim
+end
+
+local new_claim_using_force = function(force,surface,position)
+  local radar = surface.create_entity({
+    name = 'radar',
+    force = force,
+    position = position
+  })
+  local claim = new_claim_data(radar)
+  table.insert(global.radar_claim_data.claims,claim)
+  return claim
 end
 
 local find_closest_claim_on_force = function(position,force_name)
@@ -337,6 +349,8 @@ local on_tick = function()
 end
 
 local claims = {}
+
+claims.new_claim = new_claim_using_force
 
 claims.events = {
   [defines.events.on_game_created_from_scenario] = on_game_created_from_scenario,

@@ -40,7 +40,7 @@ end
 local on_player_created = function(event)
   local player = game.players[event.player_index]
   if event.player_index == 1 then
-    player.print("Welcome "..player.name.. ". You have been made a moderator")
+
   else
     player.print("Welcome "..player.name)
     game.permissions.get_group('pacifists').add_player(player)
