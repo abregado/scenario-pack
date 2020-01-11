@@ -244,6 +244,7 @@ local on_game_created_from_scenario = function()
 end
 
 local on_built_entity =  function(event)
+  local player = game.players[event.player_index]
   local active_claim = find_claim_at_position(event.created_entity.position)
   local claim = find_claim_at_position(event.created_entity.position,true)
   local continue = true
@@ -257,6 +258,14 @@ local on_built_entity =  function(event)
       add_radar_to_claim(event.created_entity,claim)
     else
       new_claim_using_event(event)
+      player.surface.create_entity{
+      name = "tutorial-flying-text",
+      text = {'flying-text.new-claim-created'},
+      position = {
+        event.created_entity.position.x,
+        event.created_entity.position.y - 1.5
+      },
+      color = {r = 0.2, g = 1, b = 0}}
     end
   elseif continue and event.created_entity.type== 'electric-pole' then
     local neighbours = event.created_entity.neighbours
@@ -316,7 +325,6 @@ local on_player_respawned = function(event)
 
   local claim = find_closest_claim_on_force(player.character.position,player.force.name)
   if claim then
-    game.print("respawning with claim")
     player.teleport(player.surface.find_non_colliding_position_in_box('character',claim.area,0.1))
   end
 end

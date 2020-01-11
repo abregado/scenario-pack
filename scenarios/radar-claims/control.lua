@@ -1,6 +1,7 @@
 local handler = require("event_handler")
 local claims = require("radar-claims")
 local no_military = require("no-military")
+local starting_areas = require("starting-areas")
 
 
 local on_created_or_loaded = function()
@@ -9,7 +10,6 @@ end
 
 local on_game_created_from_scenario = function()
 
-  --TODO: disable biters for this world
   on_created_or_loaded()
 end
 
@@ -22,8 +22,9 @@ local on_player_created = function(event)
     player.force = new_force
     for force_name, force in pairs(game.forces) do
       if force_name ~= 'enemy' then
-      force.set_friend(new_force,true)
-      new_force.set_friend(force,true)
+        force.set_friend(new_force,true)
+        new_force.set_friend(force,true)
+      end
     end
   end
 end
@@ -58,6 +59,6 @@ local main_events = {
 handler.add_lib({events = main_events})
 handler.add_lib(claims)
 handler.add_lib(no_military)
+handler.add_lib(starting_areas)
 
 script.on_load(on_created_or_loaded)
-

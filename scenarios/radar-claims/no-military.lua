@@ -31,7 +31,6 @@ local on_game_created_from_scenario = function()
   }
 
   game.surfaces['nauvis'].map_gen_settings = settings
-  --game.surfaces['nauvis'].clear()
 
   game.map_settings.pollution.enabled = false
   game.map_settings.enemy_evolution.enabled = false
