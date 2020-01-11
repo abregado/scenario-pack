@@ -14,13 +14,93 @@ local on_game_created_from_scenario = function()
   group.set_allows_action(defines.input_action.use_item,true)
 
   global.no_military_data.banned_technologies = {
-
-
+    'turrets',
+    'laser-turrets',
+    'laser',
+    'laser-turret-speed-1',
+    'laser-turret-speed-2',
+    'laser-turret-speed-3',
+    'laser-turret-speed-4',
+    'laser-turret-speed-5',
+    'laser-turret-speed-6',
+    'laser-turret-speed-7',
+    'personal-laser-defense-equipment',
+    'discharge-defense-equipment',
+    'physical-projectile-damage-1',
+    'physical-projectile-damage-2',
+    'physical-projectile-damage-3',
+    'physical-projectile-damage-4',
+    'physical-projectile-damage-5',
+    'physical-projectile-damage-6',
+    'physical-projectile-damage-7',
+    'energy-weapons-damage-1',
+    'energy-weapons-damage-2',
+    'energy-weapons-damage-3',
+    'energy-weapons-damage-4',
+    'energy-weapons-damage-5',
+    'energy-weapons-damage-6',
+    'energy-weapons-damage-7',
+    'follower-robot-count-1',
+    'follower-robot-count-2',
+    'follower-robot-count-3',
+    'follower-robot-count-4',
+    'follower-robot-count-5',
+    'follower-robot-count-6',
+    'follower-robot-count-7',
+    'refined-flammables-1',
+    'refined-flammables-2',
+    'refined-flammables-3',
+    'refined-flammables-4',
+    'refined-flammables-5',
+    'refined-flammables-6',
+    'refined-flammables-7',
+    'stronger-explosives-1',
+    'stronger-explosives-2',
+    'stronger-explosives-3',
+    'stronger-explosives-4',
+    'stronger-explosives-5',
+    'stronger-explosives-6',
+    'stronger-explosives-7',
+    'weapon-shooting-speed-1',
+    'weapon-shooting-speed-2',
+    'weapon-shooting-speed-3',
+    'weapon-shooting-speed-4',
+    'weapon-shooting-speed-5',
+    'weapon-shooting-speed-6',
+    'military-2',
+    'military-3',
+    'military-4',
+    'artillery-shell-range-1',
+    'artillery-shell-speed-1',
+    'tanks',
+    'stone-walls',
+    'gates',
+    'military-science-pack',
+    'atomic-bomb',
+    'artillery',
+    'flamethrower',
+    'rocketry',
+    'explosive-rocketry',
+    'uranium-ammo',
+    'combat-robotics',
+    'combat-robotics-2',
+    'combat-robotics-3',
+    'energy-shield-equipment',
+    'energy-shield-mk2-equipment',
+    'land-mine',
+    'explosives',
+    'cliff-explosives'
   }
 
   global.no_military_data.banned_recipes = {
     'pistol',
-    'firearm-magazine'
+    'submachine-gun',
+    'piercing-rounds-magazine',
+    'shotgun',
+    'shotgun-shell',
+    'firearm-magazine',
+    'light-armor',
+    'heavy-armor',
   }
   local settings = game.surfaces['nauvis'].map_gen_settings
   settings.peaceful_mode = true
@@ -29,6 +109,17 @@ local on_game_created_from_scenario = function()
     richness = 0,
     size = 0
   }
+
+  for _, technology_name in pairs(global.no_military_data.banned_technologies) do
+    if game.forces.player.technologies[technology_name] then
+      game.forces.player.technologies[technology_name].enabled = false
+    end
+  end
+  for _, recipe_name in pairs(global.no_military_data.banned_recipes) do
+    if game.forces.player.recipes[recipe_name] then
+      game.forces.player.recipes[recipe_name].enabled = false
+    end
+  end
 
   game.surfaces['nauvis'].map_gen_settings = settings
 
