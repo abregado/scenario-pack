@@ -6,6 +6,7 @@ local campaign_util = require(mod_name..".lualib.campaign_util")
 local effect = require(mod_name..".lualib.effects")
 local handler = require("event_handler")
 local story = require("story_2")
+local template_expand = require("template-expand")
 local math2d = require("math2d")
 
 local generate_congrats_node = function(unique_name)
@@ -32,7 +33,7 @@ local storytable = {
       {
         {
           item_name = 'stockpile-iron-plate',
-          goal = 100,
+          goal = 1,
         },
         {
           item_name = 'place-stone-furnace',
@@ -75,17 +76,41 @@ local storytable = {
       game.map_settings.enemy_evolution.enabled = false
       game.map_settings.enemy_expansion.enabled = false
     end,
+    update = function()
+      if game.ticks_played < 60 then
+        game.players[1].zoom = 2
+      end
+    end,
     condition = function()
       local placed = check.entity_placed('stone-furnace')
       local mined = check.player_crafted_list({{name='stone',goal=5}})
-      local stockpile = check.player_stockpiled_list({{name='iron-plate',goal=100}})
+      local stockpile = check.player_stockpiled_list({{name='iron-plate',goal=1}})
       return placed and mined and stockpile
     end,
     action = function()
-      game.forces.player.chart(game.surfaces[1],locations.get_area('crash-trigger'))
+      --TODO replace this with a proper chunk remover script
+      for x=-3,2 do
+        for y=-3,0 do
+          locations.get_main_surface().delete_chunk({x=x,y=y})
+          locations.get_main_surface().request_to_generate_chunks({x=x*32,y=y*32},1)
+        end
+      end
+      for x=-1,2 do
+        for y=0,2 do
+          locations.get_main_surface().delete_chunk({x=x,y=y})
+          locations.get_main_surface().request_to_generate_chunks({x=x*32,y=y*32},1)
+        end
+      end
     end
   },
   generate_congrats_node('stockpile-iron'),
+  {
+    name = 'chart-crash',
+    init = function()
+      game.forces.player.chart(locations.get_main_surface(),locations.get_area('crash-trigger'))
+    end,
+    condition = function () return story.check_seconds_passed('main_story',1) end
+  },
   {
     name = 'investigate-crash',
     init = function ()
@@ -99,7 +124,7 @@ local storytable = {
       quest_gui.set('investigate-crash', quest_layout)
 
 
-      game.forces.player.add_chart_tag(game.surfaces[1],{
+      game.forces.player.add_chart_tag(locations.get_main_surface(),{
         icon = {
           type = 'virtual',
           name = 'signal-1',
@@ -114,8 +139,7 @@ local storytable = {
       return check.player_inside_area('crash-trigger')
     end,
     action = function ()
-      --TODO objective complete flying text and sound
-      local tags = game.forces.player.find_chart_tags(game.surfaces[1],locations.get_area('crash-trigger'))
+      local tags = game.forces.player.find_chart_tags(locations.get_main_surface(),locations.get_area('crash-trigger'))
       for _, tag in pairs(tags) do
         tag.destroy()
       end
@@ -171,7 +195,11 @@ local storytable = {
       })
       effect.swap_tagged_with_fixed_entity('crash-lab','crash-site-lab-broken')
       gen.destroy()
-      --TODO objective complete flying text and sound
+
+      local settings = locations.get_main_surface().map_gen_settings
+      settings.width = 448
+      settings.height = 384
+      locations.get_main_surface().map_gen_settings = settings
     end,
   },
   generate_congrats_node('power-crashed-lab'),
@@ -289,7 +317,6 @@ local storytable = {
         assert(game.forces.player.technologies[tech_name],"no tech called: "..tech_name)
         game.forces.player.technologies[tech_name].enabled = true
       end
-      --TODO new technologies available flying text
 
       game.forces.player.recipes['stone-brick'].enabled = true
       game.forces.player.recipes['iron-stick'].enabled = true
@@ -304,44 +331,90 @@ local storytable = {
       local research = check.research_list_complete({'automobilism'})
       return crafted and car and research
     end,
+    action = function()
+      local settings = locations.get_main_surface().map_gen_settings
+      settings.width = 1792
+      settings.height = 768
+      locations.get_main_surface().map_gen_settings = settings
+      locations.get_main_surface().request_to_generate_chunks({x=21,y=0})
+    end
   },
   generate_congrats_node('power-build-car'),
   {
-    name = 'leave-with-science',
+    name = 'chart-train',
     init = function()
+      game.forces.player.chart(locations.get_main_surface(),locations.get_area('train-trigger'))
+    end,
+    condition = function () return story.check_seconds_passed('main_story',1) end
+  },
+  {
+    name = 'investigate-train',
+    init = function ()
       local quest_layout =
       {
         {
-          item_name = 'arrive-leave-trigger'
-        },
-        {
-          item_name = 'stockpile-logistic-science-pack',
-          goal = 400,
-        },
-        {
-          item_name = 'stockpile-automation-science-pack',
-          goal = 400
-        },
-        {
-          item_name = 'stockpile-firearm-magazine',
-          goal = 200
+          item_name = 'arrive-train-trigger',
+          icons = {'virtual-signal/signal-1'},
         },
       }
-      quest_gui.set('leave-with-science', quest_layout)
+      quest_gui.set('investigate-train', quest_layout)
+
+      game.forces.player.add_chart_tag(locations.get_main_surface(),{
+        icon = {
+          type = 'virtual',
+          name = 'signal-1',
+        },
+        position = math2d.bounding_box.get_centre(locations.get_area('train-trigger'))
+      })
+
     end,
     condition = function()
-      local list = check.player_stockpiled_list({
-        {name='logistic-science-pack',goal=400},
-        {name='automation-science-pack',goal=400},
-        {name='firearm-magazine',goal=200},
-      })
-      local inside_box = check.player_inside_area('leave-trigger',false)
-      return list and inside_box == false
+      return check.player_inside_area('train-trigger')
     end,
-    action = function()
-      game.set_game_state({game_finished=true, player_won=true, can_continue=false})
+    action = function ()
+      local tags = game.forces.player.find_chart_tags(locations.get_main_surface(),locations.get_area('train-trigger'))
+      for _, tag in pairs(tags) do
+        tag.destroy()
+      end
     end
-  }
+  },
+
+  --{
+  --  name = 'leave-with-science',
+  --  init = function()
+  --    local quest_layout =
+  --    {
+  --      {
+  --        item_name = 'arrive-leave-trigger'
+  --      },
+  --      {
+  --        item_name = 'stockpile-logistic-science-pack',
+  --        goal = 400,
+  --      },
+  --      {
+  --        item_name = 'stockpile-automation-science-pack',
+  --        goal = 400
+  --      },
+  --      {
+  --        item_name = 'stockpile-firearm-magazine',
+  --        goal = 200
+  --      },
+  --    }
+  --    quest_gui.set('leave-with-science', quest_layout)
+  --  end,
+  --  condition = function()
+  --    local list = check.player_stockpiled_list({
+  --      {name='logistic-science-pack',goal=400},
+  --      {name='automation-science-pack',goal=400},
+  --      {name='firearm-magazine',goal=200},
+  --    })
+  --    local inside_box = check.player_inside_area('leave-trigger',false)
+  --    return list and inside_box == false
+  --  end,
+  --  action = function()
+  --    game.set_game_state({game_finished=true, player_won=true, can_continue=false})
+  --  end
+  --}
 }
 
 local on_player_mined_entity = function(event)
@@ -356,11 +429,13 @@ end
 local on_created_or_loaded = function()
   locations.on_load()
   quest_gui.on_load()
+  template_expand.on_load()
   story.on_load("main_story", storytable)
 end
 
 local on_game_created_from_scenario = function()
-  locations.init('nauvis','nauvis')
+  locations.init('nauvis','template')
+  template_expand.init()
   story.init("main_story", storytable)
   on_created_or_loaded()
 
@@ -369,7 +444,7 @@ local on_game_created_from_scenario = function()
   pod.insert({name='firearm-magazine',count=1})
 end
 
-local on_player_created = function()
+local on_player_created = function(event)
 
 end
 
@@ -386,5 +461,6 @@ local main_events = {
 
 handler.add_lib({events = main_events})
 handler.add_lib(quest_gui)
+handler.add_lib(template_expand)
 
 script.on_load(on_created_or_loaded)
