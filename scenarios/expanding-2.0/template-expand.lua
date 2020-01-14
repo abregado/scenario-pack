@@ -1,4 +1,5 @@
 local locations = require(mod_name..".lualib.locations")
+local math2d = require('math2d')
 
 local generate_chunk_list = function(area_name)
   local chunks = {}
@@ -12,7 +13,6 @@ local generate_chunk_list = function(area_name)
     for x = data.area.left_top.x, data.area.right_bottom.x,31 do
       for y = data.area.left_top.y, data.area.right_bottom.y,31 do
         local chunk_pos = {x=math.floor(x/32),y=math.floor(y/32)}
-        --print(serpent.line(chunk_pos))
         table.insert(chunks,chunk_pos)
       end
     end
@@ -67,21 +67,10 @@ local is_chunk_modified = function(chunk_pos)
   return false
 end
 
-local on_chunk_generated = function(event)
-  if event.surface.name == locations.get_main_surface().name and is_chunk_modified(event.position) then
-    locations.get_template_surface().clone_area(
-      {
-        source_area = event.area,
-        destination_area = event.area,
-        destination_surface = locations.get_main_surface(),
-      })
-  end
-end
-
 local regen_chunks_in_list = function(chunk_list)
   for _, chunk_pos in pairs(chunk_list) do
     locations.get_main_surface().delete_chunk(chunk_pos)
-    locations.get_main_surface().request_to_generate_chunks({x=chunk_pos.x*32,y=chunk_pos.y*32},1)
+    --locations.get_main_surface().request_to_generate_chunks({x=chunk_pos.x*32,y=chunk_pos.y*32},1)
   end
 end
 
@@ -106,21 +95,70 @@ local delete_all_chunks_except_area = function(area_name)
   regen_chunks_in_list(chunks_to_delete)
 end
 
+local set_play_area_size = function(width,height)
+  local settings = locations.get_main_surface().map_gen_settings
+  if width == nil then width = settings.width end
+  if width == height then width = settings.height end
+  settings.width = width
+  settings.height = height
+  locations.get_main_surface().map_gen_settings = settings
+  global.template_expand_data.play_area = {
+    left_top = {
+      x = width/-2,
+      y = height/-2
+    },
+    right_bottom = {
+      x = width/2,
+      y = height/2
+    }
+  }
+end
+
+local resize_keeping_area = function(width,height,area_name)
+  if area_name == nil then area_name = global.template_expand_data.play_area end
+  delete_all_chunks_except_area(area_name)
+  set_play_area_size(width,height)
+end
+
+local on_chunk_generated = function(event)
+  if math2d.bounding_box.contains_box(global.template_expand_data.play_area,event.area) then
+    if event.surface.name == locations.get_main_surface().name and is_chunk_modified(event.position) then
+      locations.get_template_surface().clone_area(
+        {
+          source_area = event.area,
+          destination_area = event.area,
+          destination_surface = locations.get_main_surface(),
+        })
+    end
+  else
+    local lt = event.area.left_top
+    local rb = event.area.right_bottom
+    local tiles = {}
+    for x=lt.x,rb.x-1 do
+      for y=lt.y,rb.y-1 do
+        table.insert(tiles,{name='out-of-map',position={x=x,y=y}})
+      end
+    end
+    event.surface.set_tiles(tiles)
+
+  end
+end
+
 local on_game_created_or_loaded = function()
   global.template_expand_data.modified_chunks = generate_chunk_list('modified')
 end
 
-local init = function()
+local init = function(starting_area)
   global.template_expand_data = {}
-  on_game_created_or_loaded()
+  global.template_expand_data.play_area = starting_area
 end
 
 local template_expand = {}
 
 template_expand.on_load = on_game_created_or_loaded
 template_expand.init = init
-template_expand.recreate_chunks_around_area_name = recreate_chunks_around_area_name
-template_expand.delete_all_chunks_except_area = delete_all_chunks_except_area
+template_expand.resize_keeping_area = resize_keeping_area
+
 
 template_expand.events = {
   [defines.events.on_chunk_generated] = on_chunk_generated,

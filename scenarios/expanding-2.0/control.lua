@@ -33,7 +33,7 @@ local storytable = {
       {
         {
           item_name = 'stockpile-iron-plate',
-          goal = 1,
+          goal = 100,
         },
         {
           item_name = 'place-stone-furnace',
@@ -52,6 +52,9 @@ local storytable = {
       quest_gui.add_hint({'quest-hints.info-hand-mining'})
       quest_gui.add_hint({'quest-hints.info-move-click'})
       quest_gui.add_hint({'quest-hints.info-rotate'})
+
+      locations.get_main_surface().daytime = 0.5
+      locations.get_main_surface().ticks_per_day = 3600*15
 
       game.forces.player.disable_all_prototypes()
       game.forces.player.disable_research()
@@ -84,11 +87,11 @@ local storytable = {
     condition = function()
       local placed = check.entity_placed('stone-furnace')
       local mined = check.player_crafted_list({{name='stone',goal=5}})
-      local stockpile = check.player_stockpiled_list({{name='iron-plate',goal=1}})
-      return placed and mined and stockpile
+      local stockpile = check.player_stockpiled_list({{name='iron-plate',goal=100}})
+      return stockpile
     end,
     action = function()
-      template_expand.delete_all_chunks_except_area('starting-area')
+      template_expand.resize_keeping_area(192,192,'starting-area')
     end
   },
   generate_congrats_node('stockpile-iron'),
@@ -183,11 +186,6 @@ local storytable = {
       })
       effect.swap_tagged_with_fixed_entity('crash-lab','crash-site-lab-broken')
       gen.destroy()
-
-      local settings = locations.get_main_surface().map_gen_settings
-      settings.width = 448
-      settings.height = 384
-      locations.get_main_surface().map_gen_settings = settings
     end,
   },
   generate_congrats_node('power-crashed-lab'),
@@ -259,6 +257,9 @@ local storytable = {
       local powered = check.entity_powered('radar')
       return powered
     end,
+    action = function()
+      template_expand.resize_keeping_area(448,384)
+    end
   },
   generate_congrats_node('power-radar'),
   {
@@ -320,10 +321,7 @@ local storytable = {
       return car
     end,
     action = function()
-      local settings = locations.get_main_surface().map_gen_settings
-      settings.width = 1792
-      settings.height = 768
-      locations.get_main_surface().map_gen_settings = settings
+      template_expand.resize_keeping_area(1792,768)
       locations.get_main_surface().request_to_generate_chunks({x=21,y=0})
     end
   },
@@ -366,43 +364,42 @@ local storytable = {
       end
     end
   },
-
-  --{
-  --  name = 'leave-with-science',
-  --  init = function()
-  --    local quest_layout =
-  --    {
-  --      {
-  --        item_name = 'arrive-leave-trigger'
-  --      },
-  --      {
-  --        item_name = 'stockpile-logistic-science-pack',
-  --        goal = 400,
-  --      },
-  --      {
-  --        item_name = 'stockpile-automation-science-pack',
-  --        goal = 400
-  --      },
-  --      {
-  --        item_name = 'stockpile-firearm-magazine',
-  --        goal = 200
-  --      },
-  --    }
-  --    quest_gui.set('leave-with-science', quest_layout)
-  --  end,
-  --  condition = function()
-  --    local list = check.player_stockpiled_list({
-  --      {name='logistic-science-pack',goal=400},
-  --      {name='automation-science-pack',goal=400},
-  --      {name='firearm-magazine',goal=200},
-  --    })
-  --    local inside_box = check.player_inside_area('leave-trigger',false)
-  --    return list and inside_box == false
-  --  end,
-  --  action = function()
-  --    game.set_game_state({game_finished=true, player_won=true, can_continue=false})
-  --  end
-  --}
+  {
+    name = 'leave-with-science',
+    init = function()
+      local quest_layout =
+      {
+        {
+          item_name = 'arrive-leave-trigger'
+        },
+        {
+          item_name = 'stockpile-logistic-science-pack',
+          goal = 400,
+        },
+        {
+          item_name = 'stockpile-automation-science-pack',
+          goal = 400
+        },
+        {
+          item_name = 'stockpile-firearm-magazine',
+          goal = 200
+        },
+      }
+      quest_gui.set('leave-with-science', quest_layout)
+    end,
+    condition = function()
+      local list = check.player_stockpiled_list({
+        {name='logistic-science-pack',goal=400},
+        {name='automation-science-pack',goal=400},
+        {name='firearm-magazine',goal=200},
+      })
+      local inside_box = check.player_inside_area('leave-trigger',false)
+      return list and inside_box == false
+    end,
+    action = function()
+      game.set_game_state({game_finished=true, player_won=true, can_continue=false})
+    end
+  }
 }
 
 local on_player_mined_entity = function(event)
@@ -423,7 +420,8 @@ end
 
 local on_game_created_from_scenario = function()
   locations.init('nauvis','template')
-  template_expand.init()
+  quest_gui.init()
+  template_expand.init(locations.get_area('starting-area'))
   story.init("main_story", storytable)
   on_created_or_loaded()
 
@@ -433,7 +431,13 @@ local on_game_created_from_scenario = function()
 end
 
 local on_player_created = function(event)
-
+  game.players[event.player_index].insert('car')
+  game.players[event.player_index].insert('radar')
+  game.players[event.player_index].insert('stone-furnace')
+  game.players[event.player_index].insert('iron-ore')
+  game.players[event.player_index].insert('coal')
+  game.players[event.player_index].insert('solar-panel')
+  game.players[event.player_index].insert('small-electric-pole')
 end
 
 local on_tick = function()
@@ -447,8 +451,8 @@ local main_events = {
   [defines.events.on_tick] = on_tick,
 }
 
-handler.add_lib({events = main_events})
+handler.add_lib({events = main_events, on_load = on_created_or_loaded})
 handler.add_lib(quest_gui)
 handler.add_lib(template_expand)
 
-script.on_load(on_created_or_loaded)
+--script.on_load(on_created_or_loaded)
