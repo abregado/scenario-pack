@@ -12,7 +12,7 @@ local generate_chunk_list = function(area_name)
     for x = data.area.left_top.x, data.area.right_bottom.x,31 do
       for y = data.area.left_top.y, data.area.right_bottom.y,31 do
         local chunk_pos = {x=math.floor(x/32),y=math.floor(y/32)}
-        print(serpent.line(chunk_pos))
+        --print(serpent.line(chunk_pos))
         table.insert(chunks,chunk_pos)
       end
     end
@@ -51,15 +51,13 @@ local recreate_chunks_around_area_name = function(area_name)
   end
 end
 
-local recreate_chunks_in_area_name = function(area_name,exclusion_area_name)
-  local chunk_list = generate_chunk_list(area_name)
-  if exclusion_area_name then
-    chunk_list = chunk_list_subtract(chunk_list,generate_chunk_list(exclusion_area_name))
+
+
+local is_chunk_in_list = function(chunk_pos,list)
+  for _, modified_chunk_pos in pairs(list) do
+    if modified_chunk_pos.x == chunk_pos.x and modified_chunk_pos.y == chunk_pos.y then return true end
   end
-  for _, chunk_pos in pairs(chunk_list) do
-    locations.get_main_surface().delete_chunk(chunk_pos)
-    locations.get_main_surface().request_to_generate_chunks({x=chunk_pos.x*32,y=chunk_pos.y*32},1)
-  end
+  return false
 end
 
 local is_chunk_modified = function(chunk_pos)
@@ -80,6 +78,34 @@ local on_chunk_generated = function(event)
   end
 end
 
+local regen_chunks_in_list = function(chunk_list)
+  for _, chunk_pos in pairs(chunk_list) do
+    locations.get_main_surface().delete_chunk(chunk_pos)
+    locations.get_main_surface().request_to_generate_chunks({x=chunk_pos.x*32,y=chunk_pos.y*32},1)
+  end
+end
+
+local recreate_chunks_in_area_name = function(area_name,exclusion_area_name)
+  local chunk_list = generate_chunk_list(area_name)
+  if exclusion_area_name then
+    chunk_list = chunk_list_subtract(chunk_list,generate_chunk_list(exclusion_area_name))
+  end
+  regen_chunks_in_list(chunk_list)
+end
+
+local delete_all_chunks_except_area = function(area_name)
+  local surface = locations.get_main_surface()
+  local safe_chunks = generate_chunk_list(area_name)
+  local chunks_to_delete = {}
+  print("total: "..#surface.get_chunks().." safe: "..#safe_chunks)
+  for chunk_pos in surface.get_chunks() do
+    if is_chunk_in_list(chunk_pos,safe_chunks) == false then
+      table.insert(chunks_to_delete,chunk_pos)
+    end
+  end
+  regen_chunks_in_list(chunks_to_delete)
+end
+
 local on_game_created_or_loaded = function()
   global.template_expand_data.modified_chunks = generate_chunk_list('modified')
 end
@@ -94,6 +120,7 @@ local template_expand = {}
 template_expand.on_load = on_game_created_or_loaded
 template_expand.init = init
 template_expand.recreate_chunks_around_area_name = recreate_chunks_around_area_name
+template_expand.delete_all_chunks_except_area = delete_all_chunks_except_area
 
 template_expand.events = {
   [defines.events.on_chunk_generated] = on_chunk_generated,

@@ -88,19 +88,7 @@ local storytable = {
       return placed and mined and stockpile
     end,
     action = function()
-      --TODO replace this with a proper chunk remover script
-      for x=-3,2 do
-        for y=-3,0 do
-          locations.get_main_surface().delete_chunk({x=x,y=y})
-          locations.get_main_surface().request_to_generate_chunks({x=x*32,y=y*32},1)
-        end
-      end
-      for x=-1,2 do
-        for y=0,2 do
-          locations.get_main_surface().delete_chunk({x=x,y=y})
-          locations.get_main_surface().request_to_generate_chunks({x=x*32,y=y*32},1)
-        end
-      end
+      template_expand.delete_all_chunks_except_area('starting-area')
     end
   },
   generate_congrats_node('stockpile-iron'),
@@ -129,7 +117,7 @@ local storytable = {
           type = 'virtual',
           name = 'signal-1',
         },
-        position = game.get_entity_by_tag('crash-lab').position
+        position = locations.get_surface_ent_from_tag(locations.get_main_surface(),'crash-lab').position
       })
 
       quest_gui.add_hint({'quest-hints.info-objective-markers'})
@@ -180,11 +168,11 @@ local storytable = {
       local researched = check.research_list_complete({'automation'})
       local powered = check.tagged_entity_powered('crash-lab')
       local crafted = check.player_crafted_list({{name='automation-science-pack',goal=10}})
-      return researched and powered and crafted
+      return researched
     end,
     action = function()
-      local lab = game.get_entity_by_tag('crash-lab');
-      local gen = game.get_entity_by_tag('crash-gen');
+      local lab = locations.get_surface_ent_from_tag(locations.get_main_surface(),'crash-lab');
+      local gen = locations.get_surface_ent_from_tag(locations.get_main_surface(),'crash-gen');
       lab.surface.create_entity({
         name = 'medium-explosion',
         position = lab.position,
@@ -269,7 +257,7 @@ local storytable = {
       check.entity_powered('lab')
       local researched = check.research_list_complete({'radar'})
       local powered = check.entity_powered('radar')
-      return researched and powered
+      return powered
     end,
   },
   generate_congrats_node('power-radar'),
@@ -329,7 +317,7 @@ local storytable = {
       })
       local car = check.entity_placed('car')
       local research = check.research_list_complete({'automobilism'})
-      return crafted and car and research
+      return car
     end,
     action = function()
       local settings = locations.get_main_surface().map_gen_settings
@@ -439,7 +427,7 @@ local on_game_created_from_scenario = function()
   story.init("main_story", storytable)
   on_created_or_loaded()
 
-  local pod = game.get_entity_by_tag('pod')
+  local pod = locations.get_surface_ent_from_tag(locations.get_main_surface(),'pod')
   pod.insert({name='pistol',count=1})
   pod.insert({name='firearm-magazine',count=1})
 end
