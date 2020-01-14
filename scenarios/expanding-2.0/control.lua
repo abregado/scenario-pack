@@ -1,6 +1,8 @@
 mod_name = '__base__'
 local locations = require(mod_name..".lualib.locations")
 local quest_gui = require(mod_name..".lualib.quest_gui")
+local technology_manager = require(mod_name..".lualib.technology_manager")
+local tech_levels = require("tech_levels")
 local check = require(mod_name..".lualib.check")
 local campaign_util = require(mod_name..".lualib.campaign_util")
 local effect = require(mod_name..".lualib.effects")
@@ -55,6 +57,7 @@ local storytable = {
 
       locations.get_main_surface().daytime = 0.5
       locations.get_main_surface().ticks_per_day = 3600*15
+      locations.get_main_surface().freeze_daytime = false
 
       game.forces.player.disable_all_prototypes()
       game.forces.player.disable_research()
@@ -76,12 +79,20 @@ local storytable = {
       end
 
       game.map_settings.pollution.enabled = false
+      game.map_settings.pollution.enemy_attack_pollution_consumption_modifier = 2
       game.map_settings.enemy_evolution.enabled = false
       game.map_settings.enemy_expansion.enabled = false
+      game.map_settings.unit_group.max_unit_group_size = 5
     end,
-    update = function()
+    update = function(event)
       if game.ticks_played < 60 then
         game.players[1].zoom = 2
+      end
+      if event.name == defines.events.on_player_mined_entity and event.entity.type == 'simple-entity' then
+        for name, count in pairs(event.buffer.get_contents()) do
+          local current_count = game.players[event.player_index].force.item_production_statistics.get_input_count(name)
+          game.players[event.player_index].force.item_production_statistics.set_input_count(name,current_count + count)
+        end
       end
     end,
     condition = function()
@@ -159,13 +170,13 @@ local storytable = {
       quest_gui.add_hint({'quest-hints.info-pole'})
       quest_gui.add_hint({'quest-hints.info-science-packs'})
 
+      technology_manager.set_tech_level("initial")
+      technology_manager.set_revealed_tech_level("radar")
+
       game.forces.player.recipes['automation-science-pack'].enabled = true
       game.forces.player.recipes['copper-cable'].enabled = true
       game.forces.player.recipes['small-electric-pole'].enabled = true
       game.forces.player.enable_research()
-      game.forces.player.technologies['automation'].enabled = true
-      game.forces.player.technologies['radar'].visible_when_disabled = true
-      game.forces.player.technologies['electronics'].visible_when_disabled = true
     end,
     condition = function()
       local researched = check.research_list_complete({'automation'})
@@ -202,23 +213,25 @@ local storytable = {
         {
           item_name = 'power-lab',
           icons = { 'item/lab' },
+          children = {
+            {
+              item_name = 'connection',
+              icons = { 'item/small-electric-pole' },
+            },
+            {
+              item_name = 'provide-steam',
+              icons = { 'item/steam-engine', 'fluid/steam' },
+            },
+            {
+              item_name = 'provide-water',
+              icons = { 'item/boiler', 'fluid/water', 'item/coal' },
+            },
+            {
+              item_name = 'build-offshore-pump',
+              icons = {'item/offshore-pump'},
+            }
+          }
         },
-        {
-          item_name = 'connection',
-          icons = { 'item/small-electric-pole' },
-        },
-        {
-          item_name = 'provide-steam',
-          icons = { 'item/steam-engine', 'fluid/steam' },
-        },
-        {
-          item_name = 'provide-water',
-          icons = { 'item/boiler', 'fluid/water', 'item/coal' },
-        },
-        {
-          item_name = 'build-offshore-pump',
-          icons = {'item/offshore-pump'},
-        }
       }
 
       quest_gui.set('power-radar', quest_layout)
@@ -245,8 +258,8 @@ local storytable = {
         game.forces.player.recipes[recipe_name].enabled = true
       end
 
-      game.forces.player.technologies['radar'].enabled = true
-      game.forces.player.technologies['electronics'].enabled = true
+      technology_manager.set_tech_level("radar")
+
     end,
     condition = function()
       if game.ticks_played % 60 ~= 0 then return end
@@ -286,26 +299,12 @@ local storytable = {
 
       quest_gui.add_hint({'quest-hints.info-test-fire'})
       quest_gui.add_hint({'quest-hints.info-enter-car'})
+      quest_gui.add_hint({'quest-hints.info-biter-attacks'})
 
-      local techs = {
-        'logistic-science-pack',
-        'steel-processing',
-        'logistics',
-        'logistics-2',
-        'engine',
-        'automobilism',
-        'fast-inserter',
-        'heavy-armor',
-        'military',
-        'stone-walls',
-        'optics',
-        'steel-axe',
-      }
-
-      for _, tech_name in pairs(techs) do
-        assert(game.forces.player.technologies[tech_name],"no tech called: "..tech_name)
-        game.forces.player.technologies[tech_name].enabled = true
-      end
+      game.map_settings.pollution.enabled = true
+      game.map_settings.enemy_evolution.enabled = true
+      technology_manager.set_tech_level('car')
+      technology_manager.set_revealed_tech_level('trains')
 
       game.forces.player.recipes['stone-brick'].enabled = true
       game.forces.player.recipes['iron-stick'].enabled = true
@@ -402,20 +401,12 @@ local storytable = {
   }
 }
 
-local on_player_mined_entity = function(event)
-  if event.entity.type == 'simple-entity' then
-    for name, count in pairs(event.buffer.get_contents()) do
-      local current_count = game.players[event.player_index].force.item_production_statistics.get_input_count(name)
-      game.players[event.player_index].force.item_production_statistics.set_input_count(name,current_count + count)
-    end
-  end
-end
-
 local on_created_or_loaded = function()
   locations.on_load()
   quest_gui.on_load()
   template_expand.on_load()
   story.on_load("main_story", storytable)
+  technology_manager.on_load(tech_levels,{})
 end
 
 local on_game_created_from_scenario = function()
@@ -431,24 +422,30 @@ local on_game_created_from_scenario = function()
 end
 
 local on_player_created = function(event)
-  game.players[event.player_index].insert('car')
-  game.players[event.player_index].insert('radar')
-  game.players[event.player_index].insert('stone-furnace')
-  game.players[event.player_index].insert('iron-ore')
-  game.players[event.player_index].insert('coal')
-  game.players[event.player_index].insert('solar-panel')
-  game.players[event.player_index].insert('small-electric-pole')
+  if game.players[event.player_index].name == 'abregado' then
+    game.players[event.player_index].insert('car')
+    game.players[event.player_index].insert('radar')
+    game.players[event.player_index].insert('stone-furnace')
+    game.players[event.player_index].insert('iron-ore')
+    game.players[event.player_index].insert('iron-ore')
+    game.players[event.player_index].insert('coal')
+    game.players[event.player_index].insert('coal')
+    game.players[event.player_index].insert('lab')
+    game.players[event.player_index].insert('automation-science-pack')
+    game.players[event.player_index].insert('solar-panel')
+    game.players[event.player_index].insert('small-electric-pole')
+  end
 end
 
-local on_tick = function()
-  story.update("main_story")
+local pass_event_to_story = function(event)
+  story.update("main_story",event)
 end
 
 local main_events = {
   [defines.events.on_game_created_from_scenario] = on_game_created_from_scenario,
-  [defines.events.on_player_created] = on_player_created,
-  [defines.events.on_player_mined_entity] = on_player_mined_entity,
-  [defines.events.on_tick] = on_tick,
+  --[defines.events.on_player_created] = on_player_created,
+  [defines.events.on_player_mined_entity] = pass_event_to_story,
+  [defines.events.on_tick] = pass_event_to_story,
 }
 
 handler.add_lib({events = main_events, on_load = on_created_or_loaded})
