@@ -62,6 +62,9 @@ local campaign_tech_levels =
     name = 'oil',
     techs = {
       'fluid-wagon',
+      'battery',
+      'electric-energy-accumulators',
+      'solar-energy',
       'oil-processing',
       'fluid-handling',
       'flammables',
@@ -86,9 +89,6 @@ local campaign_tech_levels =
   {
     name = 'robots',
     techs = {
-      'battery',
-      'electric-energy-accumulators',
-      'solar-energy',
       'plastics',
       'advanced-electronics',
       'electric-engine',

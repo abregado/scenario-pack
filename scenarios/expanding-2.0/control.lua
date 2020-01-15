@@ -19,7 +19,7 @@ local generate_congrats_node = function(unique_name)
       local position = game.players[1].position
       if not position.x then position.x = position[1] end
       if not position.y then position.y = position[2] end
-      game.surfaces[1].create_entity{name = "tutorial-flying-text", text = {"tutorial-gui.objective-complete"},
+      game.surfaces[1].create_entity{name = "tutorial-flying-text", text = {"flying-text.objective-complete"},
                                  position = {position.x, position.y - 1.5}, color = {r = 12, g = 243, b = 56}}
       game.forces.player.play_sound({ path = "utility/achievement_unlocked" })
     end,
@@ -59,6 +59,27 @@ local storytable = {
       locations.get_main_surface().ticks_per_day = 3600*15
       locations.get_main_surface().freeze_daytime = false
 
+      local pre_placed = game.forces['pre-placed'] or game.create_force('pre-placed')
+      local pre_placed_agro_biters = game.forces['pre-placed-agro-biters'] or game.create_force('pre-placed-agro-biters')
+      local pre_placed_agro_all = game.forces['pre-placed-agro-all'] or game.create_force('pre-placed-agro-all')
+
+      for _, force in pairs(game.forces) do
+        if force.name == 'pre-placed' then
+          for _, to_be_allied in pairs(game.forces) do
+            force.set_friend(to_be_allied,true)
+            to_be_allied.set_friend(force,true)
+          end
+        elseif force.name == 'pre-placed-agro-biters' then
+          game.forces.player.set_friend(force,true)
+          force.set_friend(game.forces.player,true)
+          game.forces['pre-placed'].set_friend(force,true)
+          force.set_friend(game.forces['pre-placed'],true)
+        elseif force.name == 'pre-placed-agro-all' then
+          game.forces['pre-placed'].set_friend(force,true)
+          force.set_friend(game.forces['pre-placed'],true)
+        end
+      end
+
       game.forces.player.disable_all_prototypes()
       game.forces.player.disable_research()
       game.forces.player.clear_chart(game.surfaces[1])
@@ -82,7 +103,7 @@ local storytable = {
       game.map_settings.pollution.enemy_attack_pollution_consumption_modifier = 2
       game.map_settings.enemy_evolution.enabled = false
       game.map_settings.enemy_expansion.enabled = false
-      game.map_settings.unit_group.max_unit_group_size = 5
+      game.map_settings.unit_group.max_unit_group_size = 1
     end,
     update = function(event)
       if game.ticks_played < 60 then
@@ -303,6 +324,7 @@ local storytable = {
 
       game.map_settings.pollution.enabled = true
       game.map_settings.enemy_evolution.enabled = true
+      game.map_settings.enemy_expansion.enabled = true
       technology_manager.set_tech_level('car')
       technology_manager.set_revealed_tech_level('trains')
 
@@ -321,84 +343,207 @@ local storytable = {
     end,
     action = function()
       template_expand.resize_keeping_area(1792,768)
-      locations.get_main_surface().request_to_generate_chunks({x=21,y=0})
+      local area_centres = {
+        math2d.bounding_box.get_centre(locations.get_area('exploration-1-trigger')),
+        math2d.bounding_box.get_centre(locations.get_area('exploration-2-trigger')),
+        math2d.bounding_box.get_centre(locations.get_area('exploration-3-trigger')),
+      }
+      for _, position in pairs(area_centres) do
+        locations.get_main_surface().request_to_generate_chunks({x=math.floor(position.x/32),y=math.floor(position.y/32)})
+      end
     end
   },
   generate_congrats_node('power-build-car'),
   {
-    name = 'chart-train',
+    name = 'chart-exploration-sites',
     init = function()
-      game.forces.player.chart(locations.get_main_surface(),locations.get_area('train-trigger'))
+       local chart_areas = {
+        locations.get_area('exploration-1-trigger'),
+        locations.get_area('exploration-2-trigger'),
+        locations.get_area('exploration-3-trigger'),
+      }
+      for _, area in pairs(chart_areas) do
+        game.forces.player.chart(locations.get_main_surface(),area)
+      end
     end,
     condition = function () return story.check_seconds_passed('main_story',1) end
   },
   {
-    name = 'investigate-train',
+    name = 'investigate-exploration-sites',
     init = function ()
       local quest_layout =
       {
         {
-          item_name = 'arrive-train-trigger',
+          item_name = 'visited-exploration-1-trigger',
           icons = {'virtual-signal/signal-1'},
         },
-      }
-      quest_gui.set('investigate-train', quest_layout)
-
-      game.forces.player.add_chart_tag(locations.get_main_surface(),{
-        icon = {
-          type = 'virtual',
-          name = 'signal-1',
+        {
+          item_name = 'visited-exploration-2-trigger',
+          icons = {'virtual-signal/signal-2'},
         },
-        position = math2d.bounding_box.get_centre(locations.get_area('train-trigger'))
-      })
+        {
+          item_name = 'visited-exploration-3-trigger',
+          icons = {'virtual-signal/signal-3'},
+        },
+        {
+          item_name = 'arrive-crash-trigger',
+        },
+      }
+      quest_gui.set('investigate-exploration-sites', quest_layout)
 
+      global.story_variable_data.explored_site_one = false
+      global.story_variable_data.explored_site_two = false
+      global.story_variable_data.explored_site_three = false
+
+      for n=1,3 do
+        game.forces.player.add_chart_tag(locations.get_main_surface(),{
+          icon = {
+            type = 'virtual',
+            name = 'signal-'..n,
+          },
+          position = math2d.bounding_box.get_centre(locations.get_area('exploration-'..n..'-trigger'))
+        })
+      end
+    end,
+    update = function(event)
+      if technology_manager.get_current_tech_level() == 'car' and (global.story_variable_data.explored_site_one or
+        global.story_variable_data.explored_site_two or
+        global.story_variable_data.explored_site_three) then
+        technology_manager.set_tech_level('trains')
+        technology_manager.set_revealed_tech_level('oil')
+      end
     end,
     condition = function()
-      return check.player_inside_area('train-trigger')
+      if global.story_variable_data.explored_site_one == false and check.player_inside_area('exploration-1-trigger',false) then
+        global.story_variable_data.explored_site_one = true
+        quest_gui.update_state('visited-exploration-1-trigger','success')
+      end
+      if global.story_variable_data.explored_site_two == false and check.player_inside_area('exploration-2-trigger',false) then
+        global.story_variable_data.explored_site_two = true
+        quest_gui.update_state('visited-exploration-2-trigger','success')
+      end
+      if global.story_variable_data.explored_site_three == false and check.player_inside_area('exploration-3-trigger',false) then
+        global.story_variable_data.explored_site_three = true
+        quest_gui.update_state('visited-exploration-3-trigger','success')
+      end
+      local returned = check.player_inside_area('crash-trigger')
+      return global.story_variable_data.explored_site_one == true and
+        global.story_variable_data.explored_site_two == true and
+        global.story_variable_data.explored_site_three == true and returned
+
     end,
     action = function ()
-      local tags = game.forces.player.find_chart_tags(locations.get_main_surface(),locations.get_area('train-trigger'))
+      --TODO clean this sucker up
+      local tags = game.forces.player.find_chart_tags(locations.get_main_surface(),locations.get_area('exploration-1-trigger'))
       for _, tag in pairs(tags) do
         tag.destroy()
       end
-    end
+      tags = game.forces.player.find_chart_tags(locations.get_main_surface(),locations.get_area('exploration-2-trigger'))
+      for _, tag in pairs(tags) do
+        tag.destroy()
+      end
+      tags = game.forces.player.find_chart_tags(locations.get_main_surface(),locations.get_area('exploration-3-trigger'))
+      for _, tag in pairs(tags) do
+        tag.destroy()
+      end
+    end,
   },
+  generate_congrats_node('investigate-exploration-sites'),
   {
-    name = 'leave-with-science',
+    name = 'bring-train',
     init = function()
       local quest_layout =
       {
         {
-          item_name = 'arrive-leave-trigger'
+          item_name = 'wait-for-entity-in-leave-trigger',
         },
         {
-          item_name = 'stockpile-logistic-science-pack',
-          goal = 400,
-        },
-        {
-          item_name = 'stockpile-automation-science-pack',
-          goal = 400
-        },
-        {
-          item_name = 'stockpile-firearm-magazine',
-          goal = 200
+          item_name = 'arrive-crash-trigger',
         },
       }
-      quest_gui.set('leave-with-science', quest_layout)
+      quest_gui.set('bring-train', quest_layout)
+      global.story_variable_data.fluid_wagon = locations.get_main_surface().find_entities_filtered({
+        name='fluid-wagon'
+      })[1]
+
     end,
     condition = function()
-      local list = check.player_stockpiled_list({
-        {name='logistic-science-pack',goal=400},
-        {name='automation-science-pack',goal=400},
-        {name='firearm-magazine',goal=200},
-      })
-      local inside_box = check.player_inside_area('leave-trigger',false)
-      return list and inside_box == false
+      local wagon_at_crash = global.story_variable_data.fluid_wagon and
+        check.entity_inside_area('leave-trigger',global.story_variable_data.fluid_wagon)
+      local returned = check.player_inside_area('crash-trigger')
+      return wagon_at_crash and returned
+    end,
+    action = function()
+      global.story_variable_data.fluid_wagon.destructible = true
+      global.story_variable_data.fluid_wagon.minable = true
+
+    end
+  },
+  generate_congrats_node('bring-train'),
+  {
+    name = 'charge-accumulators',
+    init = function()
+      local quest_layout =
+      {
+        {
+          item_name = 'place-accumulator',
+          goal = 150,
+        },
+        {
+          item_name = 'charge-radar',
+          goal = 150,
+        },
+      }
+      quest_gui.set('charge-accumulators', quest_layout)
+
+      technology_manager.set_tech_level('oil')
+      technology_manager.set_revealed_tech_level('robots')
+    end,
+    condition = function()
+      local placed = check.player_placed_quantity('accumulator',150)
+      local charge = check.one_of_entity_has_charge_on_network('radar',150)
+      return placed and charge
     end,
     action = function()
       game.set_game_state({game_finished=true, player_won=true, can_continue=false})
-    end
+    end,
   }
+  --{
+  --  name = 'leave-with-science',
+  --  init = function()
+  --    local quest_layout =
+  --    {
+  --      {
+  --        item_name = 'arrive-leave-trigger'
+  --      },
+  --      {
+  --        item_name = 'stockpile-logistic-science-pack',
+  --        goal = 400,
+  --      },
+  --      {
+  --        item_name = 'stockpile-automation-science-pack',
+  --        goal = 400
+  --      },
+  --      {
+  --        item_name = 'stockpile-firearm-magazine',
+  --        goal = 200
+  --      },
+  --    }
+  --    quest_gui.set('leave-with-science', quest_layout)
+  --  end,
+  --  condition = function()
+  --    local list = check.player_stockpiled_list({
+  --      {name='logistic-science-pack',goal=400},
+  --      {name='automation-science-pack',goal=400},
+  --      {name='firearm-magazine',goal=200},
+  --    })
+  --    local inside_box = check.player_inside_area('leave-trigger',false)
+  --    return list and inside_box == false
+  --  end,
+  --  action = function()
+  --    game.set_game_state({game_finished=true, player_won=true, can_continue=false})
+  --  end
+  --}
 }
 
 local on_created_or_loaded = function()
@@ -410,6 +555,8 @@ local on_created_or_loaded = function()
 end
 
 local on_game_created_from_scenario = function()
+  global.story_variable_data = {}
+  global.story_variable_data.attacks_sent = 1
   locations.init('nauvis','template')
   quest_gui.init()
   template_expand.init(locations.get_area('starting-area'))
@@ -441,11 +588,21 @@ local pass_event_to_story = function(event)
   story.update("main_story",event)
 end
 
+local on_unit_group_finished_gathering = function(event)
+  --every three attacks, increase wave size
+  if global.story_variable_data.attacks_sent % 3 == 0 then
+    game.map_settings.unit_group.max_unit_group_size = math.min(math.ceil(game.map_settings.unit_group.max_unit_group_size) * 1.5,200)
+    --1,2,3,5,8,12,18,27,41,62,93,140,200
+  end
+  global.story_variable_data.attacks_sent = global.story_variable_data.attacks_sent + 1
+end
+
 local main_events = {
   [defines.events.on_game_created_from_scenario] = on_game_created_from_scenario,
-  --[defines.events.on_player_created] = on_player_created,
+  [defines.events.on_player_created] = on_player_created,
   [defines.events.on_player_mined_entity] = pass_event_to_story,
   [defines.events.on_tick] = pass_event_to_story,
+  [defines.events.on_unit_group_finished_gathering] = on_unit_group_finished_gathering,
 }
 
 handler.add_lib({events = main_events, on_load = on_created_or_loaded})

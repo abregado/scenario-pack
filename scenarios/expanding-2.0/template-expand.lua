@@ -144,6 +144,12 @@ local on_chunk_generated = function(event)
   end
 end
 
+local on_entity_cloned = function(event)
+  if event.destination.type == 'unit-spawner' then
+    event.destination.active = true
+  end
+end
+
 local on_game_created_or_loaded = function()
   global.template_expand_data.modified_chunks = generate_chunk_list('modified')
 end
@@ -162,6 +168,7 @@ template_expand.resize_keeping_area = resize_keeping_area
 
 template_expand.events = {
   [defines.events.on_chunk_generated] = on_chunk_generated,
+  [defines.events.on_entity_cloned] = on_entity_cloned,
 }
 
 return template_expand
