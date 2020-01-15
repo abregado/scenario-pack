@@ -487,11 +487,11 @@ local storytable = {
       {
         {
           item_name = 'place-accumulator',
-          goal = 150,
+          goal = 100,
         },
         {
           item_name = 'charge-radar',
-          goal = 150,
+          goal = 100,
         },
       }
       quest_gui.set('charge-accumulators', quest_layout)
@@ -500,8 +500,8 @@ local storytable = {
       technology_manager.set_revealed_tech_level('robots')
     end,
     condition = function()
-      local placed = check.player_placed_quantity('accumulator',150)
-      local charge = check.one_of_entity_has_charge_on_network('radar',150)
+      local placed = check.player_placed_quantity('accumulator',100)
+      local charge = check.one_of_entity_has_charge_on_network('radar',100)
       return placed and charge
     end,
     action = function()
