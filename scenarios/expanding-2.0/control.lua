@@ -591,7 +591,7 @@ end
 local on_unit_group_finished_gathering = function(event)
   --every three attacks, increase wave size
   if global.story_variable_data.attacks_sent % 3 == 0 then
-    game.map_settings.unit_group.max_unit_group_size = math.min(math.ceil(game.map_settings.unit_group.max_unit_group_size) * 1.5,200)
+    game.map_settings.unit_group.max_unit_group_size = math.min(math.ceil(game.map_settings.unit_group.max_unit_group_size * 1.5),200)
     --1,2,3,5,8,12,18,27,41,62,93,140,200
   end
   global.story_variable_data.attacks_sent = global.story_variable_data.attacks_sent + 1
