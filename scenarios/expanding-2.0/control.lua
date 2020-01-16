@@ -10,6 +10,7 @@ local handler = require("event_handler")
 local story = require("story_2")
 local template_expand = require("template-expand")
 local math2d = require("math2d")
+local autodeploy = require ("autodeploy")
 
 local generate_congrats_node = function(unique_name)
   return
@@ -553,6 +554,7 @@ local on_created_or_loaded = function()
   template_expand.on_load()
   story.on_load("main_story", storytable)
   technology_manager.on_load(tech_levels,{})
+  autodeploy.on_load()
 end
 
 local on_game_created_from_scenario = function()
@@ -609,5 +611,6 @@ local main_events = {
 handler.add_lib({events = main_events, on_load = on_created_or_loaded})
 handler.add_lib(quest_gui)
 handler.add_lib(template_expand)
+handler.add_lib(autodeploy)
 
 --script.on_load(on_created_or_loaded)
