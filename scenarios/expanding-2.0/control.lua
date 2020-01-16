@@ -501,6 +501,7 @@ local storytable = {
     end,
     condition = function()
       local placed = check.player_placed_quantity('accumulator',100)
+      if game.ticks_played % 300 ~= 0 then return false end
       local charge = check.one_of_entity_has_charge_on_network('radar',100)
       return placed and charge
     end,
