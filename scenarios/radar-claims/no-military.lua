@@ -1,6 +1,6 @@
 local no_military = {}
 
-local on_game_created_from_scenario = function()
+local init = function()
   global.no_military_data = {}
 
   local group = game.permissions.create_group('pacifists')
@@ -170,6 +170,7 @@ local on_research_finished = function(event)
 end
 
 local on_chunk_generated = function(event)
+  --print("no military chunk generation")
   local enemies = event.surface.find_entities_filtered({
     force = 'enemy',
     area = area,
@@ -179,8 +180,9 @@ local on_chunk_generated = function(event)
   end
 end
 
+no_military.init = init
+
 no_military.events = {
-  [defines.events.on_game_created_from_scenario] = on_game_created_from_scenario,
   [defines.events.on_player_created] = on_player_created,
   [defines.events.on_player_respawned] = on_player_respawned,
   [defines.events.on_force_created] = on_force_created,

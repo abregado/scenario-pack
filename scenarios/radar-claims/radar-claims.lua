@@ -24,8 +24,14 @@ local new_claim_data = function(entity)
       rendering.draw_rectangle({
         surface = entity.surface,
         color = {0.6,0.6,0.6},
-        left_top = chunk_area.left_top,
-        right_bottom = chunk_area.right_bottom,
+        left_top = {
+          x= chunk_area.left_top.x+0.1,
+          y= chunk_area.left_top.y+0.1,
+        },
+        right_bottom = {
+          x = chunk_area.right_bottom.x-0.1,
+          y = chunk_area.right_bottom.y-0.1
+        },
         forces = {entity.force},
       })
     },
@@ -117,6 +123,7 @@ local check_claim_is_active = function(claim)
     set_claim_overlay_visiblilty(claim,claim.active)
   else
     claim.active = true
+    set_claim_overlay_visiblilty(claim,claim.active)
   end
 
   if claim.active and starting_state == false then
@@ -305,7 +312,7 @@ local create_claims_highscore = function(player)
 
 end
 
-local on_game_created_from_scenario = function()
+local init = function()
   global.radar_claim_data = {}
   global.radar_claim_data.claims = {}
   global.radar_claim_data.settings = {
@@ -376,17 +383,6 @@ local on_player_mined_entity = function(event)
   end
 end
 
-local on_player_created = function(event)
-  local player = game.players[event.player_index]
-  local claim = find_closest_claim_on_force(player.position,player.force.name)
-  if claim then
-    player.teleport(player.surface.find_non_colliding_position_in_box('character',claim.area,0.1))
-  end
-  player.insert({name='solar-panel',count=10})
-  player.insert({name='radar',count=4})
-  player.insert({name='medium-electric-pole',count=4})
-end
-
 local on_entity_cloned = function(event)
   local claim = find_claim_at_position(event.destination.position,true)
   if claim and event.destination.type == 'radar' then
@@ -421,10 +417,9 @@ end
 local claims = {}
 
 claims.new_claim = new_claim_using_force
+claims.init = init
 
 claims.events = {
-  [defines.events.on_game_created_from_scenario] = on_game_created_from_scenario,
-  [defines.events.on_player_created] = on_player_created,
   [defines.events.on_player_respawned] = on_player_respawned,
   [defines.events.on_built_entity] = on_built_entity,
   [defines.events.on_player_mined_entity] = on_player_mined_entity,
