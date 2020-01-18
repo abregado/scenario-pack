@@ -117,7 +117,7 @@ local check_claim_is_active = function(claim)
   elseif claim.requires_power then
     local powered = false
     for _, radar in pairs(claim.radars) do
-      if radar.is_connected_to_electric_network() and radar.energy > 0 then powered = true end
+      if radar.valid == true and radar.is_connected_to_electric_network() and radar.energy > 800 then powered = true end
     end
     claim.active = powered
     set_claim_overlay_visiblilty(claim,claim.active)
@@ -312,9 +312,14 @@ local create_claims_highscore = function(player)
 
 end
 
+local reset_next_power_check = function()
+  global.radar_claim_data.next_update = game.ticks_played + global.radar_claim_data.settings.radar_power_check_frequency
+end
+
 local init = function()
   global.radar_claim_data = {}
   global.radar_claim_data.claims = {}
+  global.radar_claim_data.next_update = 1
   global.radar_claim_data.settings = {
     allow_placement_in_unclaimed_chunks = true,
     allow_remove_from_unclaimed_chunks = true,
@@ -322,7 +327,6 @@ local init = function()
     allow_removal_from_others_claims = false,
     allow_placement_in_others_claims = false,
     radar_power_check_frequency = 60,
-    update_gui_frequency = 3600,
   }
 end
 
@@ -390,8 +394,10 @@ local on_entity_cloned = function(event)
   local claim = find_claim_at_position(event.destination.position,true)
   if claim and event.destination.type == 'radar' then
     add_radar_to_claim(event.destination,claim)
+    reset_next_power_check()
   elseif event.destination.type == 'radar' then
     new_claim_using_event({created_entity=event.destination})
+    reset_next_power_check()
   end
 end
 
@@ -405,16 +411,15 @@ local on_player_respawned = function(event)
 end
 
 local on_tick = function()
-  if game.ticks_played % global.radar_claim_data.settings.radar_power_check_frequency ~= 0 then return end
-  for _, claim in pairs(global.radar_claim_data.claims) do
-    check_claim_is_active(claim)
-  end
-  if game.ticks_played % global.radar_claim_data.settings.update_gui_frequency ~= 0 then
+  if game.ticks_played > global.radar_claim_data.next_update then
+    for _, claim in pairs(global.radar_claim_data.claims) do
+      check_claim_is_active(claim)
+    end
     for _, player in pairs(game.players) do
       create_claims_highscore(player)
     end
+    reset_next_power_check()
   end
-
 end
 
 local claims = {}

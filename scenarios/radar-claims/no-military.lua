@@ -4,14 +4,14 @@ local init = function()
   global.no_military_data = {}
 
   local group = game.permissions.create_group('pacifists')
-  group.set_allows_action(defines.input_action.change_picking_state,true)
-  group.set_allows_action(defines.input_action.change_shooting_state,true)
-  group.set_allows_action(defines.input_action.open_kills_gui,true)
-  group.set_allows_action(defines.input_action.select_next_valid_gun,true)
-  group.set_allows_action(defines.input_action.set_car_weapons_control,true)
-  group.set_allows_action(defines.input_action.wire_dragging,true)
-  group.set_allows_action(defines.input_action.use_artillery_remote,true)
-  group.set_allows_action(defines.input_action.use_item,true)
+  group.set_allows_action(defines.input_action.change_picking_state,false)
+  group.set_allows_action(defines.input_action.change_shooting_state,false)
+  group.set_allows_action(defines.input_action.open_kills_gui,false)
+  group.set_allows_action(defines.input_action.select_next_valid_gun,false)
+  group.set_allows_action(defines.input_action.set_car_weapons_control,false)
+  group.set_allows_action(defines.input_action.wire_dragging,false)
+  group.set_allows_action(defines.input_action.use_artillery_remote,false)
+  group.set_allows_action(defines.input_action.use_item,false)
 
   global.no_military_data.banned_technologies = {
     'turrets',
@@ -130,14 +130,10 @@ end
 
 local on_player_created = function(event)
   local player = game.players[event.player_index]
-  if event.player_index == 1 then
-
-  else
-    player.print("Welcome "..player.name)
-    game.permissions.get_group('pacifists').add_player(player)
-    for _, item_name in pairs(global.no_military_data.banned_recipes) do
-      player.remove_item({name=item_name,count=9999})
-    end
+  player.print("Welcome "..player.name)
+  game.permissions.get_group('pacifists').add_player(player)
+  for _, item_name in pairs(global.no_military_data.banned_recipes) do
+    player.remove_item({name=item_name,count=9999})
   end
 end
 

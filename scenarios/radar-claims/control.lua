@@ -95,7 +95,8 @@ end
 
 local on_game_created_from_scenario = function()
   global.game_started = false
-  game.create_surface('play-area')
+  local new_surface = game.create_surface('play-area')
+  new_surface.always_day = true
   claims.init()
   no_military.init()
   starting_areas.init('play-area')
