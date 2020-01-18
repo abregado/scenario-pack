@@ -1,4 +1,4 @@
-local handler = require("event_handler")
+local handler = require("__base__.lualib.event_handler")
 local claims = require("radar-claims")
 local no_military = require("no-military")
 local starting_areas = require("starting-areas")
@@ -174,9 +174,18 @@ local main_events = {
   [defines.events.on_chunk_generated] = on_chunk_generated,
 }
 
-handler.add_lib({events = main_events})
-handler.add_lib(starting_areas)
-handler.add_lib(claims)
-handler.add_lib(no_military)
+local event_receivers = {
+  main_events,
+  starting_areas.events,
+  claims.events,
+  no_military.events
+}
 
-script.on_load(on_created_or_loaded)
+handler.setup_event_handling(event_receivers)
+
+--handler.add_lib({events = main_events})
+--handler.add_lib(starting_areas)
+--handler.add_lib(claims)
+--handler.add_lib(no_military)
+
+script.on_load(function() on_created_or_loaded() end)

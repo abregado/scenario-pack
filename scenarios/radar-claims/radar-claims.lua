@@ -32,7 +32,7 @@ local new_claim_data = function(entity)
           x = chunk_area.right_bottom.x-0.1,
           y = chunk_area.right_bottom.y-0.1
         },
-        forces = {entity.force},
+        forces = nil,--{entity.force},
       })
     },
     force = entity.force.name,
@@ -319,7 +319,7 @@ local init = function()
     allow_placement_in_unclaimed_chunks = true,
     allow_remove_from_unclaimed_chunks = true,
     allow_remove_radars_from_inactive_claims = true,
-    allow_removal_from_others_claims = true,
+    allow_removal_from_others_claims = false,
     allow_placement_in_others_claims = false,
     radar_power_check_frequency = 60,
     update_gui_frequency = 3600,
@@ -333,6 +333,9 @@ local on_built_entity =  function(event)
   local continue = true
   if continue and global.radar_claim_data.settings.allow_placement_in_unclaimed_chunks == false and active_claim == nil then
     continue = deny_building(event,{'flying-text.no-building-outside-claims'},true)
+  end
+  if continue and global.radar_claim_data.settings.allow_placement_in_others_claims == false and claim and claim.force ~= player.force.name then
+    continue = deny_building(event,{'flying-text.no-building-in-other-claims'})
   end
 
   if continue and event.created_entity.type == 'radar' then
