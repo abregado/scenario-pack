@@ -1,5 +1,6 @@
 local handler = require("__base__.lualib.event_handler")
 local math2d = require('math2d')
+local rooms = require('room-gui')
 
 local unlock_door = function(door_name,player)
   local door_data = nil
@@ -28,60 +29,7 @@ local unlock_door = function(door_name,player)
   end
 end
 
-local build_door_gui = function(door_data,player,has_all)
-  local frame = player.gui.left.add({
-    type = 'frame',
-    caption = {'door-gui.heading'},
-    direction = 'vertical',
-    name = door_data.name,
-  })
-  frame.style.width = 300
-  local text = frame.add({
-    type = 'label',
-    caption = {'door-gui.text'},
-    name = 'door-text'
-  })
-  text.style.single_line = false
-  local table = frame.add({
-    type = 'table',
-    name = 'cost-table',
-    column_count = 3,
-  })
-  local heading = table.add({
-    type = 'label',
-    caption = {"",'[font=default-bold]',{'door-gui.ingredient-heading'},'[/font]'},
-  })
-  heading.style.width = 120
-  local icon_heading = table.add({
-    type = 'label',
-    caption = " ",
-  })
-  icon_heading.style.width = 32
-  table.add({
-    type = 'label',
-    caption = {"",'[font=default-bold]',{'door-gui.count-heading'},'[/font]'},
-  })
-  for _, ingredient in pairs(door_data.cost) do
-    table.add({
-      type = 'label',
-      caption = game.item_prototypes[ingredient[1]].localised_name,
-    })
-    table.add({
-      type = 'label',
-      caption = "[img=item/"..ingredient[1].."]",
-    })
-    table.add({
-      type = 'label',
-      caption = ingredient[2],
-    })
-  end
-  local button = frame.add({
-    type = 'button',
-    caption = {'door-gui.button'},
-    name = 'button-unlock'
-  })
-  button.enabled = has_all
-end
+
 
 local setup_unlockable_gate = function(area_name,cost_to_open)
   assert(game.surfaces[1].get_script_areas(area_name),"Invalid area for setting up door "..area_name)
@@ -101,10 +49,19 @@ local setup_unlockable_gate = function(area_name,cost_to_open)
   })
 end
 
-local on_game_created_from_scenario = function()
-  global.inner_zones = {}
-  global.outer_zones = {}
-  local areas = game.surfaces[1].get_script_areas('inner-area')
+local make_room_salvagable = function(bounding_box,surface)
+  local ents = surface.find_entities_filtered({
+    type = {'gate','wall','underground-belt'},
+    invert = true
+  })
+  for _, ent in pairs(ents) do
+    ent.minable = true
+    ent.destructible = true
+  end
+end
+
+local create_room_zone = function(area_name,surface)
+  local areas = game.surfaces[1].get_script_areas(area_name)
   for _, area in pairs(areas) do
     table.insert(global.inner_zones,{
       bounding_box = area.area,
@@ -122,15 +79,29 @@ local on_game_created_from_scenario = function()
         filled = true
       })
     })
-    local gates = game.surfaces[1].find_entities_filtered({
-      type = 'wall',
-      area = area.area
-    })
-    for _, gate in pairs(gates) do
-      gate.destructible = false
-      gate.minable = false
-    end
+    make_room_salvagable(area.area,surface)
   end
+end
+
+local make_all_fixed = function(surface)
+  local ents = surface.find_entities_filtered({
+    force = 'player'
+  })
+  for _, ent in pairs(ents) do
+    ent.minable = false
+    ent.destructible = false
+  end
+end
+
+local on_game_created_from_scenario = function()
+  global.inner_zones = {}
+  global.outer_zones = {}
+
+  make_all_fixed(game.surfaces[1])
+
+  create_room_zone('inner-area',game.surfaces[1])
+  create_room_zone('electronics-room',game.surfaces[1])
+
   areas = game.surfaces[1].get_script_areas('outer-area')
   for _, area in pairs(areas) do
     table.insert(global.outer_zones,{
@@ -182,7 +153,7 @@ local on_player_changed_position = function(event)
             has_all = false
           end
         end
-        build_door_gui(door_data,player,has_all)
+        rooms.build_door_gui(door_data,player,has_all)
       elseif player.gui.left[door_data.name] and not math2d.bounding_box.contains_point(door_data.area,player.position) then
         player.gui.left[door_data.name].destroy()
       end
