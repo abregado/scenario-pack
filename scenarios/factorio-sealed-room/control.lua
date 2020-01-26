@@ -197,10 +197,23 @@ local on_gui_click = function(event)
   end
 end
 
+local on_selected_entity_changed = function(event)
+  local selected = game.players[event.player_index].selected
+  if selected == nil then return end
+  local inside = false
+  for _, zone in pairs(global.inner_zones) do
+    if math2d.bounding_box.contains_point(zone.bounding_box,selected.position) then
+      inside = true
+    end
+  end
+  if inside == false then game.players[event.player_index].selected = nil end
+end
+
 local events = {
   [defines.events.on_game_created_from_scenario] = on_game_created_from_scenario,
   [defines.events.on_player_changed_position] = on_player_changed_position,
   [defines.events.on_gui_click] = on_gui_click,
+  [defines.events.on_selected_entity_changed] = on_selected_entity_changed,
 }
 
 local event_recievers = {
