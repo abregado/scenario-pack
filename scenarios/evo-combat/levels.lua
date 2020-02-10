@@ -9,10 +9,15 @@ evolution.levels[1] = {
 
   },
   inventory = {
-    {name='pistol',count=1},
     {name='raw-fish',count=3},
     {name='light-armor',count=1},
     {name='constant-combinator',count=1},
+    {name='submachine-gun',count=1},
+    {name='raw-fish',count=4},
+    {name='heavy-armor',count=1},
+    {name='repair-pack',count=10},
+    {name='gun-turret',count=1},
+    {name='firearm-magazine',count=200},
   },
   filters = {
     'raw-fish',
@@ -24,29 +29,8 @@ evolution.levels[1] = {
 }
 
 evolution.levels[2] = {
-  name="red",
-  threshold = 0,
-  technology = {},
-  inventory = {
-    {name='raw-fish',count=4},
-    {name='submachine-gun',count=1},
-    {name='shotgun',count=1},
-    {name='shotgun-shell',count=50},
-    {name='heavy-armor',count=1},
-    {name='gun-turret',count=1},
-    {name='repair-pack',count=10},
-    {name='firearm-magazine',count=200},
-  },
-  remove = {
-    'pistol',
-    'light-armor'
-  },
-  message = "Tech upgraded: Better weapons and armor",
-}
-
-evolution.levels[3] = {
   name="red-plus",
-  threshold = 5,
+  threshold = 5.1,
   technology = {
     'weapon-shooting-speed-1',
     'physical-projectile-damage-1',
@@ -57,7 +41,7 @@ evolution.levels[3] = {
   message = "Tech upgraded: more dps",
 }
 
-evolution.levels[4] = {
+evolution.levels[3] = {
   name="green",
   threshold = 15,
   inventory = {
@@ -71,7 +55,7 @@ evolution.levels[4] = {
   message = "Green Science Upgrades incoming: car + piercing ammo",
 }
 
-evolution.levels[5] = {
+evolution.levels[4] = {
   name="green-plus",
   threshold = 19,
   inventory = {
@@ -85,7 +69,7 @@ evolution.levels[5] = {
   message = "Green Science Plus Upgrades incoming: damage and shooting speed",
 }
 
-evolution.levels[6] = {
+evolution.levels[5] = {
   name="black",
   threshold = 23,
   inventory = {
@@ -99,7 +83,7 @@ evolution.levels[6] = {
   message = "Black Science Upgrades incoming: passive damage buffs",
 }
 
-evolution.levels[7] = {
+evolution.levels[6] = {
   name="black-plus",
   threshold = 30,
   inventory = {
@@ -112,7 +96,7 @@ evolution.levels[7] = {
   message = "Black Science Upgrades incoming: passive damage buffs",
 }
 
-evolution.levels[8] = {
+evolution.levels[7] = {
   name="oil",
   threshold = 38,
   inventory = {
@@ -139,7 +123,7 @@ evolution.levels[8] = {
   message = "Oil Upgrades 1 incoming: flamethrower + rockets + modular armor",
 }
 
-evolution.levels[9] = {
+evolution.levels[8] = {
   name="oil-two",
   threshold = 45,
   inventory = {
@@ -154,7 +138,7 @@ evolution.levels[9] = {
   message = "Oil Upgrades 2 incoming: passive damage buffs",
 }
 
-evolution.levels[10] = {
+evolution.levels[9] = {
   name="oil-three",
   threshold = 50,
   inventory = {},
@@ -166,7 +150,7 @@ evolution.levels[10] = {
   message = "Oil Upgrades 3 incoming: passive damage buffs",
 }
 
-evolution.levels[11] = {
+evolution.levels[10] = {
   name="oil-four",
   threshold = 55,
   inventory = {},
@@ -177,7 +161,7 @@ evolution.levels[11] = {
   message = "Oil Upgrades 4 incoming: more laser damage",
 }
 
-evolution.levels[12] = {
+evolution.levels[11] = {
   name="blue",
   threshold = 60,
   inventory = {
@@ -190,7 +174,7 @@ evolution.levels[12] = {
   message = "Blue Science upgrades incoming: tank + capsules + passive boost",
 }
 
-evolution.levels[13] = {
+evolution.levels[12] = {
   name="blue-two",
   threshold = 65,
   inventory = {
@@ -210,7 +194,7 @@ evolution.levels[13] = {
   message = "Blue Science 2 upgrades incoming: moar damage",
 }
 
-evolution.levels[14] = {
+evolution.levels[13] = {
   name="blue-three",
   threshold = 70,
   inventory = {
@@ -224,7 +208,7 @@ evolution.levels[14] = {
   message = "Blue Science 3 upgrades incoming: moar robots",
 }
 
-evolution.levels[15] = {
+evolution.levels[14] = {
   name="processing",
   threshold = 75,
   technology = {},
@@ -240,7 +224,7 @@ evolution.levels[15] = {
   message = "Processing Unit upgrades incoming: power armor + better equipment",
 }
 
-evolution.levels[16] = {
+evolution.levels[15] = {
   name="yellow",
   threshold = 80,
   inventory = {
@@ -254,7 +238,7 @@ evolution.levels[16] = {
   message = "Yellow Science upgrades incoming: new power armor + robots + ammo",
 }
 
-evolution.levels[17] = {
+evolution.levels[16] = {
   name="yellow-two",
   threshold = 82,
   inventory = {},
@@ -270,7 +254,7 @@ evolution.levels[17] = {
   message = "Yellow Science 2 upgrades incoming: damage techs",
 }
 
-evolution.levels[18] = {
+evolution.levels[17] = {
   name="yellow-three",
   threshold = 85,
   inventory = {},
@@ -284,7 +268,7 @@ evolution.levels[18] = {
   message = "Yellow Science 3 upgrades incoming: more damage techs",
 }
 
-evolution.levels[19] = {
+evolution.levels[18] = {
   name="yellow-four",
   threshold = 87,
   inventory = {},
@@ -296,7 +280,7 @@ evolution.levels[19] = {
   message = "Yellow Science 4 upgrades incoming: more more damage techs",
 }
 
-evolution.levels[20] = {
+evolution.levels[19] = {
   name="nuclear",
   threshold = 90,
   technology = {},
@@ -309,7 +293,7 @@ evolution.levels[20] = {
   message = "Nuclear upgrades incoming: DU rounds and nukes",
 }
 
-evolution.levels[21] = {
+evolution.levels[20] = {
   name="artillery",
   threshold = 93,
   technology = {},
@@ -321,7 +305,7 @@ evolution.levels[21] = {
   message = "Artillery upgrades incoming: you win!",
 }
 
-evolution.levels[22] = {
+evolution.levels[21] = {
   name="artillery-plus",
   threshold = 96,
   technology = {
@@ -337,7 +321,7 @@ evolution.levels[22] = {
   message = "Final Upgrades: you win!",
 }
 
-evolution.levels[23] = {
+evolution.levels[22] = {
   threshold = 120,
   technology = {},
   inventory = {},
@@ -406,6 +390,16 @@ evolution.set_evo_to_package = function(package_index)
   return false
 end
 
+evolution.get_percent_to_next_level = function()
+  local current_package = evolution.levels[evolution.current_package()]
+  local next_package = evolution.levels[evolution.current_package()+1]
+
+  local max = (next_package.threshold - current_package.threshold) / 100
+  local current = game.forces.enemy.evolution_factor - (current_package.threshold / 100)
+
+  return current / max
+end
+
 evolution.set_player_package = function(player,package_index)
   local was_changed = false
   local reloaded = false
@@ -455,11 +449,11 @@ evolution.set_player_package = function(player,package_index)
   end
   
   if was_changed then
-    player.print(evolution.levels[package_index].message)
+    player.print({'combat-message.level-up'})
   end
   
   if reloaded then
-    player.print("Reloaded: tech level "..package_index-1)
+    player.print({'combat-message.reloaded'})
   end
 end
 
