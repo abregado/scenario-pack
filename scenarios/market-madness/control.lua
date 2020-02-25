@@ -21,7 +21,7 @@ end
 local on_player_created = function(event)
   local player = game.players[event.player_index]
   free_builder.set_player_active(player)
-
+  market.init_player(player)
 end
 
 
