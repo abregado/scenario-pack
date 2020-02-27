@@ -375,7 +375,7 @@ market.init_player = function(player)
   create_market_gui(player)
   table.insert(global.market_data.player_areas,{name=player.name,area={left_top={-500,-500},right_bottom={500,500}}})
   global.market_data.player_prices[player.name] = {}
-  global.market_data.player_wallets[player.name] = 0
+  global.market_data.player_wallets[player.name] = 100000
 end
 
 market.update = function()
