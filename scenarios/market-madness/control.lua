@@ -90,10 +90,37 @@ local on_tick = function(event)
   end
 end
 
+local on_gui_click = function(event)
+  local player = game.players[event.player_index]
+  if event.element.valid then
+    if event.element.name == 'buy_land' then
+      local plot_data = global.land_data.plots[global.land_data.players[player.name].current_land]
+      if plot_data then
+        market.add_market_area(player,plot_data.surface,{
+          left_top = {
+            x = plot_data.position.x - 32,
+            y = plot_data.position.y - 32,
+          },
+          right_bottom = {
+            x = plot_data.position.x + 32,
+            y = plot_data.position.y + 32,
+          }
+        })
+        plot_data.owner = player.name
+        market.buy(player,plot_data.price,1)
+        land.update_player(player)
+      end
+    elseif event.element.name =='refresh_market' then
+      
+    end
+  end
+end
+
 local events = {
   [defines.events.on_game_created_from_scenario] = on_game_created_from_scenario,
   [defines.events.on_player_created] = on_player_created,
   [defines.events.on_tick] = on_tick,
+  [defines.events.on_gui_click] = on_gui_click,
 }
 
 local event_receivers = {
