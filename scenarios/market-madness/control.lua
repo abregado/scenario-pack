@@ -1,5 +1,6 @@
 local handler = require("__base__.lualib.event_handler")
 local free_builder = require('free-builder')
+local land = require('planetary_real_estate')
 local market = require('active_market')
 local math2d = require('math2d')
 
@@ -9,13 +10,67 @@ local on_game_created_from_scenario = function()
   free_builder.add_free_item('logistic-chest-requester',10)
   free_builder.add_free_item('electric-mining-drill',10)
   market.on_load()
-  local interface = game.surfaces[1].create_entity({
-    position = {0,0},
-    name = 'electric-energy-interface',
-    force = 'free-builders'
+  land.on_load()
+  game.create_surface('abregado-rae',{
+    seed=555,
+    water='none',
+    starting_area='none',
+    property_expression_names={
+      moisture=0,
+      elevation=100,
+    },
+    autoplace_controls={
+      ['iron-ore'] = {size='none'},
+      ['copper-ore'] = {size='none'},
+      ['coal'] = {size='none'},
+    }
   })
-  interface.destructible = false
-  interface.minable = false
+  game.create_surface('skudakan',{
+    seed=187,
+    water='none',
+    starting_area='none',
+    property_expression_names={
+      moisture=0.5,
+      elevation=100,
+    },
+    autoplace_controls={
+      ['iron-ore'] = {size='none'},
+      ['stone'] = {size='none'},
+      ['coal'] = {size='none'},
+    }
+  })
+  game.create_surface('brekkenridge',{
+    seed=341,
+    water='none',
+    starting_area='none',
+    property_expression_names={
+      moisture=1,
+      elevation=100,
+    },
+    autoplace_controls={
+      ['iron-ore'] = {size='none'},
+      ['stone'] = {size='none'},
+      ['copper-ore'] = {size='none'},
+    }
+  })
+  game.create_surface('penelope',{
+    seed=997,
+    water='none',
+    starting_area='none',
+    property_expression_names={
+      aux=1,
+      elevation=100,
+    },
+    autoplace_controls={
+      ['stone'] = {size='none'},
+      ['copper-ore'] = {size='none'},
+      ['coal'] = {size='none'},
+    }
+  })
+  land.add_plot('abregado-rae',{x=0,y=0})
+  land.add_plot('skudakan',{x=0,y=0})
+  land.add_plot('brekkenridge',{x=0,y=0})
+  land.add_plot('penelope',{x=0,y=0})
 end
 
 local on_player_created = function(event)
@@ -45,6 +100,7 @@ local event_receivers = {
   events,
   free_builder.events,
   market.events,
+  land.events,
 }
 
 handler.setup_event_handling(event_receivers)
