@@ -443,7 +443,7 @@ local player_buy = function(player,price,count)
   if type(player) == 'string' then player = game.players[player] end
   if player then
     global.market_data.player_wallets[player.name] = global.market_data.player_wallets[player.name] - (price*count)
-    game.print(game.tick..':transaction: '..tostring(price*count*-1))
+    --game.print(game.tick..':transaction: '..tostring(price*count*-1))
     update_wallet_gui(game.players[player.name])
   end
 end
@@ -452,7 +452,7 @@ local player_sell = function(player,price,count)
   if type(player) == 'string' then player = game.players[player] end
   if player then
     global.market_data.player_wallets[player.name] = global.market_data.player_wallets[player.name] + (price*count)
-    game.print(game.tick..':transaction: '..tostring(price*count))
+    --game.print(game.tick..':transaction: '..tostring(price*count))
     update_wallet_gui(game.players[player.name])
   end
 end
@@ -558,10 +558,10 @@ market.buy = player_buy
 market.sell = player_sell
 
 market.init_player = function(player)
-  create_wallet_gui(player)
-  create_market_gui(player)
   global.market_data.player_prices[player.name] = {}
   global.market_data.player_wallets[player.name] = 100000
+  update_wallet_gui(player)
+  create_market_gui(player)
 end
 
 market.update = function()
