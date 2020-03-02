@@ -56,12 +56,12 @@ local cover_map_with_black = function()
         overlay_id = rendering.draw_rectangle({
           color = {0,0,0},
           left_top = {
-            x = chunk.area.left_top.x +0.5,
-            y = chunk.area.left_top.y -0.1,
+            x = chunk.area.left_top.x -0.5,
+            y = chunk.area.left_top.y -1.1,
           },
           right_bottom = {
-            x = chunk.area.right_bottom.x -0.5,
-            y = chunk.area.right_bottom.y -1.1,
+            x = chunk.area.right_bottom.x +0.5,
+            y = chunk.area.right_bottom.y -0.1,
           },
           surface = game.surfaces[1],
           filled = true
@@ -92,7 +92,7 @@ local cover_map_with_black = function()
                 },
                 right_bottom = {
                   x = x + 1.5,
-                  y = y + 1,
+                  y = y + 0.9,
                 },
                 surface = game.surfaces[1],
                 filled = true
