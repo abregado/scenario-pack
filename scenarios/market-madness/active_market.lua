@@ -9,6 +9,7 @@ local fake_demand = {
   {name = 'iron-plate', price = 11},
   {name = 'copper-plate', price = 11},
   {name = 'stone-brick', price = 11},
+  {name = 'electronic-circuit', price = 32},
 }
 
 
@@ -357,7 +358,7 @@ local tally_sell_orders = function()
     if not global.market_data.sell_orders_by_product[raw_data.name] then
       global.market_data.sell_orders_by_product[raw_data.name] = {}
     end
-    table.insert(global.market_data.sell_orders_by_product[raw_data.name],{count = 100, price = raw_data.price, location = nil, player = nil})
+    table.insert(global.market_data.sell_orders_by_product[raw_data.name],{count = raw_data.count or 100, price = raw_data.price, location = nil, player = nil})
   end
 
   for item_name, orders in pairs(global.market_data.sell_orders_by_product) do
@@ -407,9 +408,9 @@ local tally_buy_orders = function()
     if not global.market_data.buy_orders_by_product[raw_data.name] then
       global.market_data.buy_orders_by_product[raw_data.name] = {}
     end
-    table.insert(global.market_data.buy_orders_by_product[raw_data.name],{count = 10, price = raw_data.price, location = nil, player = nil})
-    table.insert(global.market_data.buy_orders_by_product[raw_data.name],{count = 100, price = raw_data.price/2, location = nil, player = nil})
-    table.insert(global.market_data.buy_orders_by_product[raw_data.name],{count = 400, price = raw_data.price/4, location = nil, player = nil})
+    table.insert(global.market_data.buy_orders_by_product[raw_data.name],{count = raw_data.count or 10, price = raw_data.price, location = nil, player = nil})
+    table.insert(global.market_data.buy_orders_by_product[raw_data.name],{count = (raw_data.count and raw_data.count * 10) or 100, price = raw_data.price/2, location = nil, player = nil})
+    table.insert(global.market_data.buy_orders_by_product[raw_data.name],{count = (raw_data.count and raw_data.count * 40) or 400, price = raw_data.price/4, location = nil, player = nil})
   end
 
   for item_name, orders in pairs(global.market_data.buy_orders_by_product) do

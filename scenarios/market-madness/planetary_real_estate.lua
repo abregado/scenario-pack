@@ -98,7 +98,7 @@ local init_plot = function(plot)
   local sell = surface.create_entity({
     name = 'logistic-chest-active-provider',
     position = {
-      x = position.x + 3,
+      x = position.x + 2,
       y = position.y
     },
     force = 'free-builders'

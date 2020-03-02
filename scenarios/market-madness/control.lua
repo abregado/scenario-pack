@@ -6,8 +6,6 @@ local math2d = require('math2d')
 
 local on_game_created_from_scenario = function()
   free_builder.on_load()
-  free_builder.add_free_item('logistic-chest-active-provider',10)
-  free_builder.add_free_item('logistic-chest-requester',10)
   free_builder.add_free_item('electric-mining-drill',10)
   market.on_load()
   land.on_load()
