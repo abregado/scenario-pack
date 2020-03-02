@@ -29,7 +29,81 @@ local unlock_door = function(door_name,player)
   end
 end
 
+local point_inside_rooms = function(rooms,point)
+  local result = false
+  for _, box in pairs(rooms) do
+    if math2d.bounding_box.contains_point(box,point) then result = true end
+  end
+  return result
+end
 
+local rooms_colliding_with_box = function(area)
+  local colliding_areas = {}
+  for _, zone_data in pairs(global.inner_zones) do
+    if math2d.bounding_box.collides_with(area,zone_data.bounding_box) then
+      table.insert(colliding_areas,zone_data.bounding_box)
+    end
+  end
+  return colliding_areas
+end
+
+local cover_map_with_black = function()
+  for chunk in game.surfaces[1].get_chunks() do
+    local colliding_areas = rooms_colliding_with_box(chunk.area)
+    if #colliding_areas == 0 then
+      table.insert(global.outer_zones,{
+        bounding_box = chunk.area,
+        overlay_id = rendering.draw_rectangle({
+          color = {0,0,0},
+          left_top = {
+            x = chunk.area.left_top.x +0.5,
+            y = chunk.area.left_top.y -0.1,
+          },
+          right_bottom = {
+            x = chunk.area.right_bottom.x -0.5,
+            y = chunk.area.right_bottom.y -1.1,
+          },
+          surface = game.surfaces[1],
+          filled = true
+        })
+      })
+    else
+      --fill with individual black tiles
+      for x = chunk.area.left_top.x, chunk.area.right_bottom.x -1 do
+        for y = chunk.area.left_top.y, chunk.area.right_bottom.y -1 do
+          if #rooms_colliding_with_box({
+            left_top = {
+              x = x,
+              y = y,
+            },
+            right_bottom = {
+              x = x + 1,
+              y = y + 1
+            }
+          }) == 0 then
+          --if point_inside_rooms(colliding_areas,{x=x,y=y}) == false then
+            table.insert(global.outer_zones,{
+              bounding_box = nil,
+              overlay_id = rendering.draw_rectangle({
+                color = {0,0,0},
+                left_top = {
+                  x = x - 0.5,
+                  y = y - 1.1,
+                },
+                right_bottom = {
+                  x = x + 1.5,
+                  y = y + 1,
+                },
+                surface = game.surfaces[1],
+                filled = true
+              })
+            })
+          end
+        end
+      end
+    end
+  end
+end
 
 local setup_unlockable_gate = function(area_name,cost_to_open)
   assert(game.surfaces[1].get_script_areas(area_name),"Invalid area for setting up door "..area_name)
@@ -129,6 +203,8 @@ local on_game_created_from_scenario = function()
     end
   end
   setup_unlockable_gate('door-east-corridor',{{'electronic-circuit',10},{'iron-gear-wheel',30}})
+
+  cover_map_with_black()
 
   game.surfaces[1].freeze_daytime = true
   game.surfaces[1].min_brightness = 0
