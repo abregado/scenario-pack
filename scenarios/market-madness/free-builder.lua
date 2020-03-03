@@ -53,14 +53,34 @@ free_builder.on_load = function ()
   global.free_builder_data.force.disable_all_prototypes()
 end
 
-free_builder.set_player_active = function(player)
-  global.free_builder_data.players[player.name] = {
-    player_data = player
-  }
+
+free_builder.set_player_state = function(player,state)
+  if not global.free_builder_data.players[player.name] then
+    global.free_builder_data.players[player.name] = {
+      player_data = player
+    }
+  end
+
   local old_character = player.character
   player.character = nil
   old_character.destroy()
+
+
+  if state then
+    free_builder.set_player_active(player)
+  else
+    free_builder.set_player_inactive(player)
+  end
+end
+
+free_builder.set_player_inactive = function(player)
+  player.set_controller({type = defines.controllers.ghost})
+end
+
+free_builder.set_player_active = function(player)
   player.print({'free-builder.welcome-message'})
+  player.set_controller({type = defines.controllers.god})
+  player.get_main_inventory().clear()
   for name, item_data in pairs(global.free_builder_data.free_items) do
     player.insert({name=name,count=1})
   end
@@ -121,12 +141,30 @@ local on_player_mined_entity = function(event)
   end
 end
 
+local on_player_changed_position = function(event)
+  local player = game.players[event.player_index]
+  if global.free_builder_data.players[player.name] and global.free_builder_data.players[player.name].view_box then
+    local box = global.free_builder_data.players[player.name].view_box
+    if player.position.x > box.right_bottom.x then player.teleport({x=box.right_bottom.x,y=player.position.y}) end
+    if player.position.x < box.left_top.x then player.teleport({x=box.left_top.x,y=player.position.y}) end
+    if player.position.y > box.right_bottom.y then player.teleport({x=player.position.x,y=box.right_bottom.y}) end
+    if player.position.y < box.left_top.y then player.teleport({x=player.position.x,y=box.left_top.y}) end
+  end
+end
+
+free_builder.set_player_build_area = function(player,bounding_box)
+  if global.free_builder_data.players[player.name] then
+    global.free_builder_data.players[player.name].view_box = bounding_box
+  end
+end
+
 free_builder.events = {
   [defines.events.on_built_entity] = on_built_entity,
   [defines.events.on_player_mined_entity] = on_player_mined_entity,
   [defines.events.on_player_mined_item] = on_player_mined_item,
   [defines.events.on_picked_up_item] = on_picked_up_item,
   [defines.events.on_player_dropped_item] = on_player_dropped_item,
+  [defines.events.on_player_changed_position] = on_player_changed_position,
 }
 
 return free_builder

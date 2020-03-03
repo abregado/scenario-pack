@@ -9,6 +9,13 @@ local on_game_created_from_scenario = function()
   free_builder.add_free_item('electric-mining-drill',10)
   market.on_load()
   land.on_load()
+
+  main_events[remote.call("planetary_real_estate", "get_events").on_player_changed_land] = on_player_changed_land
+
+  handler.setup_event_handling(event_receivers)
+
+  global.next_update = 0
+
   game.create_surface('abregado-rae',{
     seed=555,
     water='none',
@@ -21,7 +28,10 @@ local on_game_created_from_scenario = function()
       ['iron-ore'] = {size='none'},
       ['copper-ore'] = {size='none'},
       ['coal'] = {size='none'},
-    }
+      ['enemy-base'] = {size='none'},
+    },
+    width=0,
+    height=0
   })
   game.create_surface('skudakan',{
     seed=187,
@@ -66,17 +76,21 @@ local on_game_created_from_scenario = function()
     }
   })
   land.add_plot('abregado-rae',{x=0,y=0})
+  land.add_plot('abregado-rae',{x=512,y=0})
   land.add_plot('skudakan',{x=0,y=0})
+  land.add_plot('skudakan',{x=512,y=0})
   land.add_plot('brekkenridge',{x=0,y=0})
+  land.add_plot('brekkenridge',{x=512,y=0})
   land.add_plot('penelope',{x=0,y=0})
+  land.add_plot('penelope',{x=512,y=0})
+
 end
 
 local on_player_created = function(event)
   local player = game.players[event.player_index]
-  free_builder.set_player_active(player)
+  free_builder.set_player_state(player)
   market.init_player(player)
 end
-
 
 local on_tick = function(event)
   if not global.next_update then
@@ -84,7 +98,9 @@ local on_tick = function(event)
   end
   if event.tick > global.next_update then
     market.update()
-    global.next_update = event.tick + 300
+    global.next_update = event.tick + 60*60*5
+  elseif event.tick % 60 == 0 then
+    market.update_wallets()
   end
 end
 
@@ -114,15 +130,22 @@ local on_gui_click = function(event)
   end
 end
 
-local events = {
+local on_player_changed_land = function(event)
+  game.print("event received")
+  local player = game.players[event.player_index]
+  local land = global.land_data.plots[event.land_index]
+  free_builder.set_player_build_area(player,land.view.box)
+end
+
+main_events = {
   [defines.events.on_game_created_from_scenario] = on_game_created_from_scenario,
   [defines.events.on_player_created] = on_player_created,
   [defines.events.on_tick] = on_tick,
   [defines.events.on_gui_click] = on_gui_click,
 }
 
-local event_receivers = {
-  events,
+event_receivers = {
+  main_events,
   free_builder.events,
   market.events,
   land.events,

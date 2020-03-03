@@ -49,8 +49,13 @@ local create_wallet_gui = function(player)
   })
   frame.add({
     type = 'label',
-    caption = '0',
+    caption = 'Cash: 0$',
     name = 'money'
+  })
+  frame.add({
+    type = 'label',
+    caption = 'Time until next market update: 0s',
+    name = 'time'
   })
 end
 
@@ -58,7 +63,14 @@ local update_wallet_gui = function(player)
   if not player.gui.left.wallet_frame then
     create_wallet_gui(player)
   end
-  player.gui.left.wallet_frame.money.caption = '$'..tostring(global.market_data.player_wallets[player.name])
+  player.gui.left.wallet_frame.money.caption = 'Cash: $'..tostring(global.market_data.player_wallets[player.name])
+  player.gui.left.wallet_frame.time.caption = 'Time until next market update: : '..tostring(math.floor((global.next_update-game.ticks_played)/60))..' seconds'
+end
+
+local update_wallets = function()
+  for _, player in pairs(game.players) do
+    update_wallet_gui(player)
+  end
 end
 
 local create_market_gui = function(player)
@@ -81,119 +93,6 @@ local create_market_gui = function(player)
     caption = "Refresh"
   })
 end
-
---local refresh_market_gui = function(player,area)
---  if not player.gui.left.market_frame then
---    create_market_gui(player)
---  end
---  local market_orders = player.gui.left.market_frame.market_orders
---
---  local old_prices = {}
---  for index, child in pairs(market_orders.children) do
---    if index % 3 == 1 and index > 1 then
---      if old_prices[child.caption] then
---        old_prices[child.caption].buy = tonumber(old_prices[child.caption].buy) + tonumber(market_orders.children[index+1].text)
---        old_prices[child.caption].sell = tonumber(old_prices[child.caption].sell) + tonumber(market_orders.children[index+2].text)
---        old_prices[child.caption] = false
---      else
---        old_prices[child.caption] = {
---          buy = tonumber(market_orders.children[index+1].text) or 0,
---          sell = tonumber(market_orders.children[index+2].text) or 0,
---          active = false,
---        }
---      end
---    end
---  end
---
---  market_orders.clear()
---
---  --tally items
---  local providers = player.surface.find_entities_filtered({
---    name = 'logistic-chest-active-provider',
---    area = area,
---  })
---
---  for _, provider in pairs(providers) do
---    local contents = provider.get_inventory(defines.inventory.chest).get_contents()
---    for item_name, count in pairs(contents) do
---      if old_prices[item_name] then
---        old_prices[item_name].active = true
---      else
---        old_prices[item_name] = {
---          active = true,
---          buy = nil,
---          sell = nil,
---        }
---      end
---    end
---  end
---
---  local requesters = player.surface.find_entities_filtered({
---    name = 'logistic-chest-requester',
---    area = area,
---  })
---  for _, requester in pairs(requesters) do
---    local slots = requester.request_slot_count
---    for slot=1, slots do
---      local requested_stack = requester.get_request_slot(slot)
---      if requested_stack then
---        if old_prices[requested_stack.name] then
---          old_prices[requested_stack.name].active = true
---        else
---          old_prices[requested_stack.name] = {
---            active = true,
---            buy = nil,
---            sell = nil,
---          }
---        end
---      end
---    end
---  end
---
---  add_order_headers(market_orders)
---
---  for item_name, data in pairs(old_prices) do
---    if data.active then
---      local saved_prices = global.market_data.player_prices[player.name][item_name] or {}
---      market_orders.add({
---        type = 'label',
---        name = item_name..'-name',
---        caption = item_name,
---      })
---      local buy = market_orders.add({
---        type = 'textfield',
---        name = item_name..'-buy',
---        numeric = true,
---        allow_negative = false,
---        allow_decimal = true
---      })
---      buy.text = data.buy or saved_prices.buy or ""
---      --if data.buy then buy.text = data.buy end
---      --if buy.text == nil and saved_prices.buy then
---      --  buy.text = saved_prices.buy
---      --end
---      buy.style.width = 70
---      local sell = market_orders.add({
---        type = 'textfield',
---        name = item_name..'-sell',
---        numeric = true,
---        allow_negative = false,
---        allow_decimal = true
---      })
---      sell.text = data.sell or saved_prices.sell or ""
---      --if data.sell then sell.text = data.sell end
---      sell.style.width = 70
---
---      if data.buy == "" then
---
---      end
---      global.market_data.player_prices[player.name][item_name] = {
---        buy = data.buy,
---        sell = data.sell
---      }
---    end
---  end
---end
 
 local refresh_market_gui = function(player)
   if not player.gui.left.market_frame then
@@ -557,6 +456,7 @@ end
 
 market.buy = player_buy
 market.sell = player_sell
+market.update_wallets = update_wallets
 
 market.init_player = function(player)
   global.market_data.player_prices[player.name] = {}

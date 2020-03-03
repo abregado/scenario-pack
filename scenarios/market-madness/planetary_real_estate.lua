@@ -1,3 +1,16 @@
+local script_events =
+{
+  on_player_changed_land = script.generate_event_name()
+}
+
+local add_remote_interface = function()
+  remote.add_interface("planetary_real_estate",
+  {
+    get_events = function()
+      return script_events
+    end
+  })
+end
 
 local create_land_gui = function(player)
   local frame = player.gui.left.add({
@@ -70,13 +83,25 @@ local update_land_gui = function(player)
 end
 
 local new_plot = function(surface,position)
+  local size = 512
   table.insert(global.land_data.plots,{
     name = surface.name..'-'..tostring(position.x)..'-'..tostring(position.y),
     surface = surface,
     position = position,
     initialized = false,
+    view_box = {
+      left_top = {
+        x = position.x - (size/2),
+        y = position.y - (size/2),
+      },
+      right_bottom = {
+        x = position.x + (size/2),
+        y = position.y + (size/2),
+      },
+    },
     price = 10000,
   })
+  surface.request_to_generate_chunks(position,1)
 end
 
 local init_plot = function(plot)
@@ -122,6 +147,11 @@ local goto_land = function(player,land_index)
     if plot_data.initialized == false then
       init_plot(plot_data)
     end
+    script.raise_event(script_events.on_player_changed_land,{
+      player_index = player.index,
+      land_index = land_index,
+    })
+    game.print("sent event "..script_events.on_player_changed_land)
   end
 end
 
@@ -168,5 +198,7 @@ land.events = {
   [defines.events.on_gui_click] = on_gui_click,
   [defines.events.on_player_created] = on_player_created
 }
+
+add_remote_interface()
 
 return land
