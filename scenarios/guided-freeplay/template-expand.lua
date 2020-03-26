@@ -1,4 +1,4 @@
-local locations = require(mod_name..".lualib.locations")
+local locations = require("locations")
 local math2d = require('math2d')
 
 local generate_chunk_list = function(area_name)

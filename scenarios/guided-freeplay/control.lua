@@ -1,14 +1,12 @@
-mod_name = '__base__'
-local locations = require(mod_name..".lualib.locations")
-local quest_gui = require(mod_name..".lualib.quest_gui")
-local technology_manager = require(mod_name..".lualib.technology_manager")
-local tech_levels = require("tech_levels")
-local check = require(mod_name..".lualib.check")
-local campaign_util = require(mod_name..".lualib.campaign_util")
-local effect = require(mod_name..".lualib.effects")
+local locations = require("locations")
+local quest_gui = require("quest_gui")
+local technology_manager = require("technology_manager")
+local check = require("check")
+local effect = require("effects")
+local story = require("tom_story")
 local handler = require("event_handler")
-local story = require("story_2")
 local template_expand = require("template-expand")
+local tech_levels = require("tech_levels")
 local math2d = require("math2d")
 local autodeploy = require ("autodeploy")
 
@@ -549,6 +547,7 @@ local storytable = {
 }
 
 local on_created_or_loaded = function()
+  print("control on_created_or_loaded")
   locations.on_load()
   quest_gui.on_load()
   template_expand.on_load()
@@ -558,6 +557,7 @@ local on_created_or_loaded = function()
 end
 
 local on_game_created_from_scenario = function()
+  print("on_game_creted_from_scenario")
   global.story_variable_data = {}
   global.story_variable_data.attacks_sent = 1
   locations.init('nauvis','template')
@@ -608,9 +608,9 @@ local main_events = {
   [defines.events.on_unit_group_finished_gathering] = on_unit_group_finished_gathering,
 }
 
-handler.add_lib({events = main_events, on_load = on_created_or_loaded})
 handler.add_lib(quest_gui)
 handler.add_lib(template_expand)
 handler.add_lib(autodeploy)
+handler.add_lib({events = main_events, on_load = on_created_or_loaded})
 
 --script.on_load(on_created_or_loaded)
